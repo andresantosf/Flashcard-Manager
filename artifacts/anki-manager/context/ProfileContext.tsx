@@ -6,11 +6,24 @@ export interface Profile {
   name: string;
   color: string;
   initials: string;
+  photo: ReturnType<typeof require>;
 }
 
 export const PROFILES: Profile[] = [
-  { id: 'andre', name: 'André', color: '#3B82F6', initials: 'AN' },
-  { id: 'agnis', name: 'Agnis', color: '#EC4899', initials: 'AG' },
+  {
+    id: 'andre',
+    name: 'André',
+    color: '#3B82F6',
+    initials: 'AN',
+    photo: require('../assets/andre.png'),
+  },
+  {
+    id: 'adani',
+    name: 'Adani',
+    color: '#EC4899',
+    initials: 'AD',
+    photo: require('../assets/adani.png'),
+  },
 ];
 
 interface ProfileContextType {

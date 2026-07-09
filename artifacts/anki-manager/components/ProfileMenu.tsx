@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import {
   Animated,
+  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -82,10 +83,8 @@ export function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
                   },
                 ]}
               >
-                {/* Avatar */}
-                <View style={[styles.avatar, { backgroundColor: profile.color }]}>
-                  <Text style={styles.avatarText}>{profile.initials}</Text>
-                </View>
+                {/* Photo avatar */}
+                <ProfileAvatar photo={profile.photo} color={profile.color} size={46} />
 
                 {/* Name */}
                 <Text
@@ -110,21 +109,40 @@ export function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
   );
 }
 
-/** Compact avatar circle — reusable anywhere */
+/** Compact avatar circle — reusable anywhere. Shows photo when provided. */
 export function ProfileAvatar({
+  photo,
   initials,
   color,
   size = 34,
 }: {
-  initials: string;
+  photo?: ReturnType<typeof require>;
+  initials?: string;
   color: string;
   size?: number;
 }) {
+  const radius = size / 2;
+
+  if (photo) {
+    return (
+      <Image
+        source={photo}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radius,
+          borderWidth: 2,
+          borderColor: color,
+        }}
+      />
+    );
+  }
+
   return (
     <View
       style={[
         styles.avatar,
-        { backgroundColor: color, width: size, height: size, borderRadius: size / 2 },
+        { backgroundColor: color, width: size, height: size, borderRadius: radius },
       ]}
     >
       <Text style={[styles.avatarText, { fontSize: size * 0.32 }]}>{initials}</Text>
@@ -171,9 +189,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
   },

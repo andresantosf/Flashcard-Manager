@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { useStorage, type Note } from '@/context/StorageContext';
-import { useProfile } from '@/context/ProfileContext';
+import { useProfile, PROFILES } from '@/context/ProfileContext';
 import { NoteModal } from '@/components/NoteModal';
 import { ProfileMenu, ProfileAvatar } from '@/components/ProfileMenu';
 
@@ -53,7 +53,12 @@ function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
       <View style={styles.itemHeader}>
         {/* Author avatar */}
         {note.authorInitials && note.authorColor ? (
-          <ProfileAvatar initials={note.authorInitials} color={note.authorColor} size={26} />
+          <ProfileAvatar
+            photo={PROFILES.find((p) => p.id === note.authorId)?.photo}
+            initials={note.authorInitials}
+            color={note.authorColor}
+            size={26}
+          />
         ) : (
           <View style={[styles.avatarFallback, { backgroundColor: colors.border }]}>
             <Feather name="user" size={12} color={colors.mutedForeground} />
@@ -159,6 +164,7 @@ export default function UpdatesScreen() {
             style={({ pressed }) => [styles.avatarBtn, { opacity: pressed ? 0.7 : 1 }]}
           >
             <ProfileAvatar
+              photo={activeProfile.photo}
               initials={activeProfile.initials}
               color={activeProfile.color}
               size={38}

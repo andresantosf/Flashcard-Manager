@@ -79,6 +79,7 @@ export default function DeckScreen() {
                 style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
               >
                 <ProfileAvatar
+                  photo={activeProfile.photo}
                   initials={activeProfile.initials}
                   color={activeProfile.color}
                   size={30}

@@ -8,6 +8,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { ProfileAvatar } from '@/components/ProfileMenu';
+import { PROFILES } from '@/context/ProfileContext';
 import type { Note } from '@/context/StorageContext';
 
 interface NoteCardProps {
@@ -55,6 +56,7 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
       <View style={styles.authorRow}>
         {note.authorInitials && note.authorColor ? (
           <ProfileAvatar
+            photo={PROFILES.find((p) => p.id === note.authorId)?.photo}
             initials={note.authorInitials}
             color={note.authorColor}
             size={28}

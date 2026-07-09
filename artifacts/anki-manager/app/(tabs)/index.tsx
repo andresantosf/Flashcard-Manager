@@ -64,6 +64,7 @@ export default function HomeScreen() {
             style={({ pressed }) => [styles.avatarBtn, { opacity: pressed ? 0.7 : 1 }]}
           >
             <ProfileAvatar
+              photo={activeProfile.photo}
               initials={activeProfile.initials}
               color={activeProfile.color}
               size={38}
