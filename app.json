@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "7ea859b3-3b35-466b-8dd7-bc90b56aee55"
+      }
+    },
+    "android": {
+      "package": "com.andre_sants.workspace"
+    }
+  }
+}
