@@ -19,6 +19,7 @@ import { useStorage, type Note } from '@/context/StorageContext';
 interface NoteModalProps {
   visible: boolean;
   onClose: () => void;
+  /** Pre-selected deck when creating inside a deck screen */
   deckId?: string;
   noteToEdit?: Note;
 }
@@ -34,13 +35,17 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
   const backInputRef = useRef<TextInput>(null);
 
   const isEdit = !!noteToEdit;
-  const needsDeckPicker = !deckId && !isEdit;
+  // Show deck picker when:
+  //   - Creating without a deck context, OR
+  //   - Editing (always allow moving to another deck)
+  const showDeckPicker = (!deckId || isEdit) && decks.length > 0;
 
   useEffect(() => {
     if (visible) {
       setFront(noteToEdit?.front ?? '');
       setBack(noteToEdit?.back ?? '');
-      setSelectedDeckId(deckId ?? noteToEdit?.deckId ?? decks[0]?.id ?? '');
+      // In edit mode use the note's current deck; otherwise fall back to prop/first deck
+      setSelectedDeckId(noteToEdit?.deckId ?? deckId ?? decks[0]?.id ?? '');
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
@@ -74,12 +79,17 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
     const f = front.trim();
     const b = back.trim();
     if (!f || !b) return;
-    const targetDeckId = deckId ?? selectedDeckId;
-    if (!targetDeckId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (isEdit && noteToEdit) {
-      await updateNote(noteToEdit.id, { front: f, back: b });
+      const updates: Partial<Note> = { front: f, back: b };
+      // Move to another deck if the user changed it
+      if (selectedDeckId && selectedDeckId !== noteToEdit.deckId) {
+        updates.deckId = selectedDeckId;
+      }
+      await updateNote(noteToEdit.id, updates);
     } else {
+      const targetDeckId = deckId ?? selectedDeckId;
+      if (!targetDeckId) return;
       await createNote(targetDeckId, f, b);
     }
     onClose();
@@ -109,11 +119,11 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
           <View style={styles.handle} />
 
           <Text style={[styles.title, { color: colors.foreground }]}>
-            {isEdit ? 'Editar Nota' : 'Nova Nota'}
+            {isEdit ? 'Editar Cartão' : 'Nova Nota'}
           </Text>
 
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            {needsDeckPicker && decks.length > 0 && (
+            {showDeckPicker && (
               <>
                 <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
                   BARALHO
@@ -123,34 +133,32 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
                   showsHorizontalScrollIndicator={false}
                   style={styles.deckPicker}
                 >
-                  {decks.map((d) => (
-                    <Pressable
-                      key={d.id}
-                      onPress={() => setSelectedDeckId(d.id)}
-                      style={[
-                        styles.deckChip,
-                        {
-                          backgroundColor:
-                            selectedDeckId === d.id ? colors.primary : colors.secondary,
-                          borderLeftColor: d.color,
-                        },
-                      ]}
-                    >
-                      <Text
+                  {decks.map((d) => {
+                    const selected = selectedDeckId === d.id;
+                    return (
+                      <Pressable
+                        key={d.id}
+                        onPress={() => setSelectedDeckId(d.id)}
                         style={[
-                          styles.deckChipText,
+                          styles.deckChip,
                           {
-                            color:
-                              selectedDeckId === d.id
-                                ? colors.primaryForeground
-                                : colors.foreground,
+                            backgroundColor: selected ? d.color + '22' : colors.secondary,
+                            borderColor: selected ? d.color : 'transparent',
                           },
                         ]}
                       >
-                        {d.name}
-                      </Text>
-                    </Pressable>
-                  ))}
+                        <View style={[styles.deckChipDot, { backgroundColor: d.color }]} />
+                        <Text
+                          style={[
+                            styles.deckChipText,
+                            { color: selected ? d.color : colors.foreground },
+                          ]}
+                        >
+                          {d.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </ScrollView>
               </>
             )}
@@ -237,10 +245,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-  },
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -273,11 +277,19 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   deckChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     marginRight: 8,
-    borderLeftWidth: 3,
+    borderWidth: 1.5,
+  },
+  deckChipDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   deckChipText: {
     fontSize: 14,
