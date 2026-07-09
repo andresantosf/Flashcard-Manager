@@ -34,6 +34,18 @@ export interface Note {
   back: string;
   completed: boolean;
   createdAt: string;
+  /** Profile info — optional so old notes without author still work */
+  authorId?: string;
+  authorName?: string;
+  authorColor?: string;
+  authorInitials?: string;
+}
+
+export interface NoteAuthor {
+  id: string;
+  name: string;
+  color: string;
+  initials: string;
 }
 
 interface StorageContextType {
@@ -43,7 +55,7 @@ interface StorageContextType {
   createDeck: (name: string, color: string) => Promise<void>;
   updateDeck: (id: string, updates: Partial<Omit<Deck, 'id'>>) => Promise<void>;
   deleteDeck: (id: string) => Promise<void>;
-  createNote: (deckId: string, front: string, back: string) => Promise<void>;
+  createNote: (deckId: string, front: string, back: string, author: NoteAuthor) => Promise<void>;
   updateNote: (id: string, updates: Partial<Omit<Note, 'id'>>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   toggleNoteCompleted: (id: string) => Promise<void>;
@@ -63,24 +75,20 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
 
   const loading = !decksLoaded || !notesLoaded;
 
-  // Real-time listener — decks ordered by creation date
   useEffect(() => {
     const q = query(collection(db, DECKS), orderBy('createdAt', 'asc'));
-    const unsub = onSnapshot(q, (snap) => {
+    return onSnapshot(q, (snap) => {
       setDecks(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Deck)));
       setDecksLoaded(true);
     });
-    return unsub;
   }, []);
 
-  // Real-time listener — notes ordered by creation date
   useEffect(() => {
     const q = query(collection(db, NOTES), orderBy('createdAt', 'asc'));
-    const unsub = onSnapshot(q, (snap) => {
+    return onSnapshot(q, (snap) => {
       setNotes(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Note)));
       setNotesLoaded(true);
     });
-    return unsub;
   }, []);
 
   const createDeck = useCallback(async (name: string, color: string) => {
@@ -99,26 +107,27 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
   );
 
   const deleteDeck = useCallback(async (id: string) => {
-    // Delete deck and all its notes in a batch
     const batch = writeBatch(db);
     batch.delete(doc(db, DECKS, id));
-
     const notesSnap = await getDocs(
       query(collection(db, NOTES), where('deckId', '==', id)),
     );
     notesSnap.forEach((n) => batch.delete(n.ref));
-
     await batch.commit();
   }, []);
 
   const createNote = useCallback(
-    async (deckId: string, front: string, back: string) => {
+    async (deckId: string, front: string, back: string, author: NoteAuthor) => {
       await addDoc(collection(db, NOTES), {
         deckId,
         front,
         back,
         completed: false,
         createdAt: new Date().toISOString(),
+        authorId: author.id,
+        authorName: author.name,
+        authorColor: author.color,
+        authorInitials: author.initials,
       });
     },
     [],

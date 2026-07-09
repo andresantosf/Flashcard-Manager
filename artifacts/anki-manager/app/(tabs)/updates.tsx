@@ -11,7 +11,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { useStorage, type Note } from '@/context/StorageContext';
+import { useProfile } from '@/context/ProfileContext';
 import { NoteModal } from '@/components/NoteModal';
+import { ProfileMenu, ProfileAvatar } from '@/components/ProfileMenu';
 
 const PAGE_SIZE = 20;
 
@@ -47,21 +49,45 @@ function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
         },
       ]}
     >
-      {/* Header row */}
+      {/* Author + deck + date row */}
       <View style={styles.itemHeader}>
+        {/* Author avatar */}
+        {note.authorInitials && note.authorColor ? (
+          <ProfileAvatar initials={note.authorInitials} color={note.authorColor} size={26} />
+        ) : (
+          <View style={[styles.avatarFallback, { backgroundColor: colors.border }]}>
+            <Feather name="user" size={12} color={colors.mutedForeground} />
+          </View>
+        )}
+
+        {/* Author name */}
+        <Text
+          style={[
+            styles.authorName,
+            { color: note.authorColor ?? colors.mutedForeground },
+          ]}
+          numberOfLines={1}
+        >
+          {note.authorName ?? '—'}
+        </Text>
+
+        {/* Deck badge */}
         <View style={styles.deckBadge}>
           <View style={[styles.deckDot, { backgroundColor: deckColor }]} />
           <Text style={[styles.deckName, { color: deckColor }]} numberOfLines={1}>
             {deckName}
           </Text>
         </View>
+
         {note.completed && (
           <Feather name="check-circle" size={13} color={colors.success} />
         )}
-        <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
-          {formatDateTime(note.createdAt)}
-        </Text>
       </View>
+
+      {/* Date */}
+      <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
+        {formatDateTime(note.createdAt)}
+      </Text>
 
       {/* Front */}
       <Text
@@ -75,14 +101,10 @@ function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
         {note.front}
       </Text>
 
-      {/* Divider */}
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       {/* Back */}
-      <Text
-        style={[styles.back, { color: colors.mutedForeground }]}
-        numberOfLines={2}
-      >
+      <Text style={[styles.back, { color: colors.mutedForeground }]} numberOfLines={2}>
         {note.back}
       </Text>
     </Pressable>
@@ -93,30 +115,27 @@ export default function UpdatesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { notes, decks } = useStorage();
+  const { activeProfile } = useProfile();
 
   const [page, setPage] = useState(1);
   const [editNote, setEditNote] = useState<Note | null>(null);
+  const [profileMenuVisible, setProfileMenuVisible] = useState(false);
 
-  // Build a fast lookup map for decks
   const deckMap = useMemo(() => {
     const m: Record<string, { name: string; color: string }> = {};
     decks.forEach((d) => { m[d.id] = { name: d.name, color: d.color }; });
     return m;
   }, [decks]);
 
-  // Sort notes newest first
   const sorted = useMemo(
     () => [...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [notes],
   );
 
-  // Paginated slice
   const visible = useMemo(() => sorted.slice(0, page * PAGE_SIZE), [sorted, page]);
 
   const loadMore = useCallback(() => {
-    if (visible.length < sorted.length) {
-      setPage((p) => p + 1);
-    }
+    if (visible.length < sorted.length) setPage((p) => p + 1);
   }, [visible.length, sorted.length]);
 
   const topPad = insets.top + (Platform.OS === 'web' ? 67 : 0);
@@ -125,12 +144,27 @@ export default function UpdatesScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-          Atualizações
-        </Text>
-        <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-          {notes.length} {notes.length === 1 ? 'cartão' : 'cartões'} no total
-        </Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+              Atualizações
+            </Text>
+            <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+              {notes.length} {notes.length === 1 ? 'cartão' : 'cartões'} no total
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => setProfileMenuVisible(true)}
+            style={({ pressed }) => [styles.avatarBtn, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <ProfileAvatar
+              initials={activeProfile.initials}
+              color={activeProfile.color}
+              size={38}
+            />
+          </Pressable>
+        </View>
       </View>
 
       <FlatList
@@ -179,17 +213,25 @@ export default function UpdatesScreen() {
         onClose={() => setEditNote(null)}
         noteToEdit={editNote ?? undefined}
       />
+
+      <ProfileMenu
+        visible={profileMenuVisible}
+        onClose={() => setProfileMenuVisible(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
+  root: { flex: 1 },
   header: {
     paddingHorizontal: 24,
     paddingBottom: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
   headerTitle: {
     fontSize: 32,
@@ -201,10 +243,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
   },
-  list: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
+  avatarBtn: { marginTop: 4 },
+  list: { paddingHorizontal: 16, paddingTop: 8 },
   item: {
     borderRadius: 14,
     padding: 16,
@@ -219,42 +259,48 @@ const styles = StyleSheet.create({
   itemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
     gap: 6,
+    marginBottom: 6,
+    flexWrap: 'nowrap',
+  },
+  avatarFallback: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authorName: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    flexShrink: 1,
+    maxWidth: 70,
   },
   deckBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     flex: 1,
+    minWidth: 0,
   },
-  deckDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
+  deckDot: { width: 7, height: 7, borderRadius: 3.5, flexShrink: 0 },
   deckName: {
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Inter_500Medium',
     flexShrink: 1,
   },
   dateText: {
     fontSize: 11,
     fontFamily: 'Inter_400Regular',
-    flexShrink: 0,
+    marginBottom: 8,
   },
   front: {
     fontSize: 15,
     fontFamily: 'Inter_600SemiBold',
     lineHeight: 22,
   },
-  strikethrough: {
-    textDecorationLine: 'line-through',
-  },
-  divider: {
-    height: 1,
-    marginVertical: 10,
-  },
+  strikethrough: { textDecorationLine: 'line-through' },
+  divider: { height: 1, marginVertical: 10 },
   back: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
@@ -266,10 +312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     gap: 10,
   },
-  emptyIcon: {
-    fontSize: 56,
-    marginBottom: 8,
-  },
+  emptyIcon: { fontSize: 56, marginBottom: 8 },
   emptyTitle: {
     fontSize: 18,
     fontFamily: 'Inter_600SemiBold',

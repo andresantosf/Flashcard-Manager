@@ -18,6 +18,8 @@ import { SpeedDial } from '@/components/SpeedDial';
 import { NoteModal } from '@/components/NoteModal';
 import { DeckModal } from '@/components/DeckModal';
 import { ContextMenu } from '@/components/ContextMenu';
+import { ProfileMenu, ProfileAvatar } from '@/components/ProfileMenu';
+import { useProfile } from '@/context/ProfileContext';
 
 export default function DeckScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,6 +28,7 @@ export default function DeckScreen() {
   const router = useRouter();
   const { decks, getNotesByDeck, toggleNoteCompleted, deleteNote, deleteDeck } =
     useStorage();
+  const { activeProfile } = useProfile();
 
   const deck = decks.find((d) => d.id === id);
   const notes = deck ? getNotesByDeck(deck.id) : [];
@@ -34,6 +37,7 @@ export default function DeckScreen() {
   const [editDeckVisible, setEditDeckVisible] = useState(false);
   const [contextNote, setContextNote] = useState<Note | null>(null);
   const [editNoteVisible, setEditNoteVisible] = useState(false);
+  const [profileMenuVisible, setProfileMenuVisible] = useState(false);
 
   const bottomPad = (insets.bottom || 0) + (Platform.OS === 'web' ? 34 : 0);
 
@@ -68,12 +72,26 @@ export default function DeckScreen() {
         options={{
           title: deck.name,
           headerRight: () => (
-            <Pressable
-              onPress={() => setEditDeckVisible(true)}
-              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-            >
-              <Feather name="more-horizontal" size={22} color={colors.foreground} />
-            </Pressable>
+            <View style={styles.headerActions}>
+              {/* Profile avatar */}
+              <Pressable
+                onPress={() => setProfileMenuVisible(true)}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              >
+                <ProfileAvatar
+                  initials={activeProfile.initials}
+                  color={activeProfile.color}
+                  size={30}
+                />
+              </Pressable>
+              {/* More options */}
+              <Pressable
+                onPress={() => setEditDeckVisible(true)}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              >
+                <Feather name="more-horizontal" size={22} color={colors.foreground} />
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -147,9 +165,7 @@ export default function DeckScreen() {
       <ContextMenu
         visible={!!contextNote && !editNoteVisible}
         onClose={() => setContextNote(null)}
-        onEdit={() => {
-          setEditNoteVisible(true);
-        }}
+        onEdit={() => setEditNoteVisible(true)}
         onToggleCompleted={async () => {
           if (contextNote) {
             await toggleNoteCompleted(contextNote.id);
@@ -165,13 +181,21 @@ export default function DeckScreen() {
         }}
         isCompleted={contextNote?.completed ?? false}
       />
+
+      <ProfileMenu
+        visible={profileMenuVisible}
+        onClose={() => setProfileMenuVisible(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
+  root: { flex: 1 },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
   colorAccent: {
     flexDirection: 'row',
@@ -180,29 +204,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 8,
   },
-  colorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  accentText: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
+  colorDot: { width: 8, height: 8, borderRadius: 4 },
+  accentText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  list: { paddingHorizontal: 16, paddingTop: 8 },
   empty: {
     marginTop: 80,
     alignItems: 'center',
     paddingHorizontal: 40,
     gap: 10,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
+  emptyIcon: { fontSize: 48, marginBottom: 8 },
   emptyTitle: {
     fontSize: 18,
     fontFamily: 'Inter_600SemiBold',

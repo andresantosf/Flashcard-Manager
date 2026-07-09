@@ -1,0 +1,146 @@
+# Aplicativo Android - Gerenciador de Cartões Anki
+
+Desenvolva um aplicativo Android com foco em simplicidade, rapidez e design moderno (Material Design 3).
+
+## Tela inicial
+
+A tela inicial deve exibir um feed/lista de baralhos.
+
+Cada baralho deve conter:
+
+* Nome do baralho.
+* Quantidade de cartões logo abaixo do nome.
+* Uma borda colorida, cuja cor é definida no momento da criação do baralho.
+
+A interface deve ser limpa, minimalista e otimizada para uso com apenas uma mão.
+
+---
+
+# Perfis
+
+O aplicativo deve possuir dois perfis fixos, sem sistema de login:
+
+* André
+* Agnis
+
+Na barra superior deve existir um botão de perfil (avatar).
+
+Ao tocar nele, abrir um pequeno menu para alternar entre os dois perfis.
+
+Cada perfil possui:
+
+* Nome.
+* Foto/avatar.
+
+O perfil selecionado permanece ativo até ser alterado novamente.
+
+---
+
+# Criação de cartões
+
+Sempre que uma nova nota/cartão for criada, o aplicativo deve salvar automaticamente:
+
+* Nome do perfil ativo.
+* Foto/avatar do perfil ativo.
+* Data de criação.
+
+Essas informações ficam vinculadas permanentemente ao cartão.
+
+Na lista de cartões do baralho, cada cartão deve exibir:
+
+* Avatar pequeno do autor.
+* Nome do autor.
+* Data de criação.
+* Frente.
+* Verso.
+
+Assim será possível identificar rapidamente quem criou cada cartão.
+
+---
+
+## Botão flutuante (FAB)
+
+No canto inferior direito deve existir um botão flutuante circular (+).
+
+Ao tocá-lo:
+
+* O fundo da tela deve escurecer com um overlay.
+* Devem surgir opções animadas saindo do próprio botão.
+
+As opções são:
+
+* Novo Baralho
+* Nova Nota
+
+Se o usuário estiver dentro de um baralho, o botão deve exibir apenas a opção **Nova Nota**.
+
+---
+
+## Criar Baralho
+
+Ao criar um baralho, solicitar:
+
+* Nome.
+* Cor da borda (seletor de cores simples).
+
+---
+
+## Tela do Baralho
+
+Ao tocar em um baralho na tela inicial, abrir uma nova tela contendo todos os cartões desse baralho em formato de lista.
+
+Cada cartão deve mostrar:
+
+* Avatar do autor.
+* Nome do autor.
+* Data de criação.
+* Frente.
+* Verso.
+
+Os cartões devem ser exibidos em cards simples e organizados.
+
+---
+
+## Adicionar Nota
+
+Ao adicionar uma nota, solicitar:
+
+* Frente.
+* Verso.
+
+A nota é automaticamente adicionada ao baralho atual utilizando o perfil atualmente selecionado.
+
+---
+
+## Interação com os cartões
+
+### Toque simples
+
+Abrir imediatamente a tela de edição da nota.
+
+### Toque longo
+
+Exibir um menu de contexto com:
+
+* Editar.
+* Marcar como concluída.
+
+Ao marcar como concluída:
+
+* O cartão deve ficar visualmente diferente (por exemplo, menor opacidade, ícone de check ou texto riscado).
+* Essa informação deve ser salva.
+
+---
+
+## Design
+
+* Interface extremamente minimalista.
+* Material Design 3.
+* Poucos elementos na tela.
+* Animações suaves.
+* Cores discretas.
+* Cantos arredondados.
+* Excelente experiência de uso em dispositivos Android.
+* Navegação rápida com poucos toques.
+
+O aplicativo deve priorizar velocidade de uso, permitindo criar, editar e organizar cartões da forma mais simples possível, além de identificar facilmente qual perfil (André ou Agnis) criou cada nota.

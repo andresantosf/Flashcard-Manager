@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
+import { ProfileAvatar } from '@/components/ProfileMenu';
 import type { Note } from '@/context/StorageContext';
 
 interface NoteCardProps {
@@ -26,7 +27,6 @@ function formatDate(iso: string) {
 
 export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
   const colors = useColors();
-  // Guard: prevent onPress from firing right after a long-press release
   const wasLongPressed = useRef(false);
 
   return (
@@ -51,14 +51,31 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
         },
       ]}
     >
-      {note.completed && (
-        <View style={styles.completedBadge}>
+      {/* Author row */}
+      <View style={styles.authorRow}>
+        {note.authorInitials && note.authorColor ? (
+          <ProfileAvatar
+            initials={note.authorInitials}
+            color={note.authorColor}
+            size={28}
+          />
+        ) : (
+          <View style={[styles.authorAvatarFallback, { backgroundColor: colors.border }]}>
+            <Feather name="user" size={13} color={colors.mutedForeground} />
+          </View>
+        )}
+        <Text style={[styles.authorName, { color: note.authorColor ?? colors.mutedForeground }]}>
+          {note.authorName ?? '—'}
+        </Text>
+        <Text style={[styles.date, { color: colors.mutedForeground }]}>
+          {formatDate(note.createdAt)}
+        </Text>
+        {note.completed && (
           <Feather name="check-circle" size={14} color={colors.success} />
-        </View>
-      )}
-      <Text style={[styles.date, { color: colors.mutedForeground }]}>
-        {formatDate(note.createdAt)}
-      </Text>
+        )}
+      </View>
+
+      {/* Front */}
       <Text
         style={[
           styles.front,
@@ -69,7 +86,10 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
       >
         {note.front}
       </Text>
+
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+      {/* Back */}
       <Text
         style={[styles.back, { color: colors.mutedForeground }]}
         numberOfLines={2}
@@ -91,17 +111,27 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  completedBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  authorAvatarFallback: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authorName: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
   },
   date: {
     fontSize: 11,
     fontFamily: 'Inter_400Regular',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   front: {
     fontSize: 15,

@@ -15,6 +15,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useStorage, type Note } from '@/context/StorageContext';
+import { useProfile } from '@/context/ProfileContext';
 
 interface NoteModalProps {
   visible: boolean;
@@ -27,6 +28,8 @@ interface NoteModalProps {
 export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalProps) {
   const colors = useColors();
   const { createNote, updateNote, decks } = useStorage();
+  const { activeProfile } = useProfile();
+
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
@@ -35,42 +38,22 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
   const backInputRef = useRef<TextInput>(null);
 
   const isEdit = !!noteToEdit;
-  // Show deck picker when:
-  //   - Creating without a deck context, OR
-  //   - Editing (always allow moving to another deck)
+  // Show deck picker when creating without a deck context, or always when editing
   const showDeckPicker = (!deckId || isEdit) && decks.length > 0;
 
   useEffect(() => {
     if (visible) {
       setFront(noteToEdit?.front ?? '');
       setBack(noteToEdit?.back ?? '');
-      // In edit mode use the note's current deck; otherwise fall back to prop/first deck
       setSelectedDeckId(noteToEdit?.deckId ?? deckId ?? decks[0]?.id ?? '');
       Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 70,
-          friction: 10,
-        }),
-        Animated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
+        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 70, friction: 10 }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 600,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
+        Animated.timing(slideAnim, { toValue: 600, duration: 220, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
   }, [visible]);
@@ -80,9 +63,9 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
     const b = back.trim();
     if (!f || !b) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (isEdit && noteToEdit) {
       const updates: Partial<Note> = { front: f, back: b };
-      // Move to another deck if the user changed it
       if (selectedDeckId && selectedDeckId !== noteToEdit.deckId) {
         updates.deckId = selectedDeckId;
       }
@@ -90,7 +73,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
     } else {
       const targetDeckId = deckId ?? selectedDeckId;
       if (!targetDeckId) return;
-      await createNote(targetDeckId, f, b);
+      await createNote(targetDeckId, f, b, activeProfile);
     }
     onClose();
   };
@@ -106,8 +89,13 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
         style={styles.root}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <Pressable onPress={() => { Keyboard.dismiss(); onClose(); }} style={StyleSheet.absoluteFill}>
-          <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity, backgroundColor: '#000' }]} />
+        <Pressable
+          onPress={() => { Keyboard.dismiss(); onClose(); }}
+          style={StyleSheet.absoluteFill}
+        >
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { opacity: backdropOpacity, backgroundColor: '#000' }]}
+          />
         </Pressable>
 
         <Animated.View
@@ -123,6 +111,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
           </Text>
 
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {/* Deck picker */}
             {showDeckPicker && (
               <>
                 <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
@@ -241,10 +230,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
+  root: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -273,9 +259,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 4,
   },
-  deckPicker: {
-    marginBottom: 20,
-  },
+  deckPicker: { marginBottom: 20 },
   deckChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -286,15 +270,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
     borderWidth: 1.5,
   },
-  deckChipDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  deckChipText: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-  },
+  deckChipDot: { width: 8, height: 8, borderRadius: 4 },
+  deckChipText: { fontSize: 14, fontFamily: 'Inter_500Medium' },
   input: {
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -305,11 +282,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 80,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   btnSecondary: {
     flex: 1,
     paddingVertical: 15,
@@ -322,8 +295,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  btnText: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-  },
+  btnText: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
 });

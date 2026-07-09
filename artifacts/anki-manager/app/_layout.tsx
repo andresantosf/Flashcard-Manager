@@ -14,6 +14,7 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StorageProvider } from '@/context/StorageContext';
+import { ProfileProvider } from '@/context/ProfileContext';
 import colors from '@/constants/colors';
 
 SplashScreen.preventAutoHideAsync();
@@ -71,9 +72,11 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <StorageProvider>
-                <RootLayoutNav />
-              </StorageProvider>
+              <ProfileProvider>
+                <StorageProvider>
+                  <RootLayoutNav />
+                </StorageProvider>
+              </ProfileProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>
