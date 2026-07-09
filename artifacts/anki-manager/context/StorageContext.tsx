@@ -3,10 +3,22 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+  writeBatch,
+  getDocs,
+  where,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export interface Deck {
   id: string;
@@ -29,10 +41,10 @@ interface StorageContextType {
   notes: Note[];
   loading: boolean;
   createDeck: (name: string, color: string) => Promise<void>;
-  updateDeck: (id: string, updates: Partial<Deck>) => Promise<void>;
+  updateDeck: (id: string, updates: Partial<Omit<Deck, 'id'>>) => Promise<void>;
   deleteDeck: (id: string) => Promise<void>;
   createNote: (deckId: string, front: string, back: string) => Promise<void>;
-  updateNote: (id: string, updates: Partial<Note>) => Promise<void>;
+  updateNote: (id: string, updates: Partial<Omit<Note, 'id'>>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   toggleNoteCompleted: (id: string) => Promise<void>;
   getNotesByDeck: (deckId: string) => Note[];
@@ -40,131 +52,96 @@ interface StorageContextType {
 
 const StorageContext = createContext<StorageContextType | null>(null);
 
-const DECKS_KEY = '@anki_decks';
-const NOTES_KEY = '@anki_notes';
-
-const generateId = () =>
-  `${Date.now().toString()}_${Math.random().toString(36).substr(2, 9)}`;
+const DECKS = 'decks';
+const NOTES = 'notes';
 
 export function StorageProvider({ children }: { children: React.ReactNode }) {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [decksLoaded, setDecksLoaded] = useState(false);
+  const [notesLoaded, setNotesLoaded] = useState(false);
 
-  // Refs always hold the latest array — avoids stale-closure data loss
-  // when multiple operations happen in quick succession.
-  const decksRef = useRef<Deck[]>([]);
-  const notesRef = useRef<Note[]>([]);
+  const loading = !decksLoaded || !notesLoaded;
 
-  // Keep refs in sync with state
-  useEffect(() => { decksRef.current = decks; }, [decks]);
-  useEffect(() => { notesRef.current = notes; }, [notes]);
-
+  // Real-time listener — decks ordered by creation date
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [rawDecks, rawNotes] = await Promise.all([
-          AsyncStorage.getItem(DECKS_KEY),
-          AsyncStorage.getItem(NOTES_KEY),
-        ]);
-        const loadedDecks: Deck[] = rawDecks ? JSON.parse(rawDecks) : [];
-        const loadedNotes: Note[] = rawNotes ? JSON.parse(rawNotes) : [];
-        decksRef.current = loadedDecks;
-        notesRef.current = loadedNotes;
-        setDecks(loadedDecks);
-        setNotes(loadedNotes);
-      } catch (e) {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    const q = query(collection(db, DECKS), orderBy('createdAt', 'asc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setDecks(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Deck)));
+      setDecksLoaded(true);
+    });
+    return unsub;
   }, []);
 
-  const persistDecks = useCallback(async (next: Deck[]) => {
-    decksRef.current = next;
-    setDecks(next);
-    await AsyncStorage.setItem(DECKS_KEY, JSON.stringify(next));
+  // Real-time listener — notes ordered by creation date
+  useEffect(() => {
+    const q = query(collection(db, NOTES), orderBy('createdAt', 'asc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setNotes(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Note)));
+      setNotesLoaded(true);
+    });
+    return unsub;
   }, []);
 
-  const persistNotes = useCallback(async (next: Note[]) => {
-    notesRef.current = next;
-    setNotes(next);
-    await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(next));
+  const createDeck = useCallback(async (name: string, color: string) => {
+    await addDoc(collection(db, DECKS), {
+      name,
+      color,
+      createdAt: new Date().toISOString(),
+    });
   }, []);
-
-  const createDeck = useCallback(
-    async (name: string, color: string) => {
-      const deck: Deck = {
-        id: generateId(),
-        name,
-        color,
-        createdAt: new Date().toISOString(),
-      };
-      // Read from ref for the freshest array, not from closure
-      await persistDecks([...decksRef.current, deck]);
-    },
-    [persistDecks],
-  );
 
   const updateDeck = useCallback(
-    async (id: string, updates: Partial<Deck>) => {
-      await persistDecks(
-        decksRef.current.map((d) => (d.id === id ? { ...d, ...updates } : d)),
-      );
+    async (id: string, updates: Partial<Omit<Deck, 'id'>>) => {
+      await updateDoc(doc(db, DECKS, id), updates);
     },
-    [persistDecks],
+    [],
   );
 
-  const deleteDeck = useCallback(
-    async (id: string) => {
-      await persistDecks(decksRef.current.filter((d) => d.id !== id));
-      await persistNotes(notesRef.current.filter((n) => n.deckId !== id));
-    },
-    [persistDecks, persistNotes],
-  );
+  const deleteDeck = useCallback(async (id: string) => {
+    // Delete deck and all its notes in a batch
+    const batch = writeBatch(db);
+    batch.delete(doc(db, DECKS, id));
+
+    const notesSnap = await getDocs(
+      query(collection(db, NOTES), where('deckId', '==', id)),
+    );
+    notesSnap.forEach((n) => batch.delete(n.ref));
+
+    await batch.commit();
+  }, []);
 
   const createNote = useCallback(
     async (deckId: string, front: string, back: string) => {
-      const note: Note = {
-        id: generateId(),
+      await addDoc(collection(db, NOTES), {
         deckId,
         front,
         back,
         completed: false,
         createdAt: new Date().toISOString(),
-      };
-      await persistNotes([...notesRef.current, note]);
+      });
     },
-    [persistNotes],
+    [],
   );
 
   const updateNote = useCallback(
-    async (id: string, updates: Partial<Note>) => {
-      await persistNotes(
-        notesRef.current.map((n) => (n.id === id ? { ...n, ...updates } : n)),
-      );
+    async (id: string, updates: Partial<Omit<Note, 'id'>>) => {
+      await updateDoc(doc(db, NOTES, id), updates);
     },
-    [persistNotes],
+    [],
   );
 
-  const deleteNote = useCallback(
-    async (id: string) => {
-      await persistNotes(notesRef.current.filter((n) => n.id !== id));
-    },
-    [persistNotes],
-  );
+  const deleteNote = useCallback(async (id: string) => {
+    await deleteDoc(doc(db, NOTES, id));
+  }, []);
 
   const toggleNoteCompleted = useCallback(
     async (id: string) => {
-      await persistNotes(
-        notesRef.current.map((n) =>
-          n.id === id ? { ...n, completed: !n.completed } : n,
-        ),
-      );
+      const note = notes.find((n) => n.id === id);
+      if (!note) return;
+      await updateDoc(doc(db, NOTES, id), { completed: !note.completed });
     },
-    [persistNotes],
+    [notes],
   );
 
   const getNotesByDeck = useCallback(

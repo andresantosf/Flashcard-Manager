@@ -18,3 +18,13 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+EXPO_PUBLIC_FIREBASE_API_KEY = "AIzaSyAxm-fbDPfb99zI0ApqdSBmHOTYtwuDp8Q"
+EXPO_PUBLIC_FIREBASE_APP_ID = "1:786866735077:android:e2d816db35c1c4c6b7110c"
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN = "flashcards-73c94.firebaseapp.com"
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "786866735077"
+EXPO_PUBLIC_FIREBASE_PROJECT_ID = "flashcards-73c94"
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET = "flashcards-73c94.firebasestorage.app"
