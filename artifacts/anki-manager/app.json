@@ -33,6 +33,14 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "firebaseApiKey": "AIzaSyAxm-fbDPfb99zI0ApqdSBmHOTYtwuDp8Q",
+      "firebaseAuthDomain": "flashcards-73c94.firebaseapp.com",
+      "firebaseProjectId": "flashcards-73c94",
+      "firebaseStorageBucket": "flashcards-73c94.firebasestorage.app",
+      "firebaseMessagingSenderId": "786866735077",
+      "firebaseAppId": "1:786866735077:android:e2d816db35c1c4c6b7110c"
     }
   }
 }
