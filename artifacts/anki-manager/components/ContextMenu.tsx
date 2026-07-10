@@ -123,19 +123,10 @@ export function ContextMenu({
         >
           <Text style={[styles.cancelText, { color: colors.foreground }]}>Cancelar</Text>
         </Pressable>
-        <Pressable
-          onPress={onClose}
-          style={({ pressed }) => [
-            styles.cancelBtn,
-            { backgroundColor: colors.secondary, opacity: pressed ? 0.7 : 1 },
-          ]}
-        >
-          <Text style={[styles.cancelText, { color: colors.foreground }]}>Cancelar</Text>
-        </Pressable>
       </Animated.View>
 
       {confirmDeleteVisible ? (
-        <Modal visible transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.confirmOverlay}>
           <Pressable style={styles.confirmOverlay} onPress={() => setConfirmDeleteVisible(false)}>
             <View style={[styles.confirmBox, { backgroundColor: colors.card }]}> 
               <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Excluir cartão</Text>
@@ -160,7 +151,7 @@ export function ContextMenu({
               </View>
             </View>
           </Pressable>
-        </Modal>
+        </View>
       ) : null}
     </Modal>
   );
