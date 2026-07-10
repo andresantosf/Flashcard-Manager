@@ -3,6 +3,7 @@ import {
   FlatList,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -43,9 +44,9 @@ function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
       style={({ pressed }) => [
         styles.item,
         {
-          backgroundColor: colors.card,
+          backgroundColor: note.completed ? colors.muted : colors.card,
           opacity: pressed ? 0.8 : 1,
-          borderLeftColor: deckColor,
+          borderLeftColor: note.completed ? colors.border : deckColor,
         },
       ]}
     >
@@ -85,7 +86,7 @@ function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
         </View>
 
         {note.completed && (
-          <Feather name="check-circle" size={13} color={colors.success} />
+          <Feather name="check-circle" size={13} color={colors.mutedForeground} />
         )}
       </View>
 
@@ -123,6 +124,7 @@ export default function UpdatesScreen() {
   const [page, setPage] = useState(1);
   const [editNote, setEditNote] = useState<Note | null>(null);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+  const [selectedDeckId, setSelectedDeckId] = useState<string>('all');
 
   const deckMap = useMemo(() => {
     const m: Record<string, { name: string; color: string }> = {};
@@ -130,14 +132,19 @@ export default function UpdatesScreen() {
     return m;
   }, [decks]);
 
+  const filteredNotes = useMemo(() => {
+    if (selectedDeckId === 'all') return notes;
+    return notes.filter((note) => note.deckId === selectedDeckId);
+  }, [notes, selectedDeckId]);
+
   const sorted = useMemo(
-    () => [...notes].sort((a, b) => {
+    () => [...filteredNotes].sort((a, b) => {
       if (a.completed === b.completed) {
         return b.createdAt.localeCompare(a.createdAt);
       }
       return a.completed ? 1 : -1;
     }),
-    [notes],
+    [filteredNotes],
   );
 
   const visible = useMemo(() => sorted.slice(0, page * PAGE_SIZE), [sorted, page]);
@@ -174,6 +181,64 @@ export default function UpdatesScreen() {
             />
           </Pressable>
         </View>
+      </View>
+
+      <View style={styles.deckFilterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.deckFilterScroll}
+        >
+          <Pressable
+            onPress={() => setSelectedDeckId('all')}
+            style={({ pressed }) => [
+              styles.deckChip,
+              {
+                backgroundColor:
+                  selectedDeckId === 'all' ? colors.primary + '22' : colors.secondary,
+                borderColor: selectedDeckId === 'all' ? colors.primary : 'transparent',
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.deckChipText,
+                { color: selectedDeckId === 'all' ? colors.primary : colors.foreground },
+              ]}
+            >
+              Todos
+            </Text>
+          </Pressable>
+
+          {decks.map((deck) => {
+            const selected = selectedDeckId === deck.id;
+            return (
+              <Pressable
+                key={deck.id}
+                onPress={() => setSelectedDeckId(deck.id)}
+                style={({ pressed }) => [
+                  styles.deckChip,
+                  {
+                    backgroundColor: selected ? deck.color + '22' : colors.secondary,
+                    borderColor: selected ? deck.color : 'transparent',
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.deckChipDot, { backgroundColor: deck.color }]} />
+                <Text
+                  style={[
+                    styles.deckChipText,
+                    { color: selected ? deck.color : colors.foreground },
+                  ]}
+                >
+                  {deck.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
       <FlatList
@@ -254,6 +319,18 @@ const styles = StyleSheet.create({
   },
   avatarBtn: { marginTop: 4 },
   list: { paddingHorizontal: 16, paddingTop: 8 },
+  deckFilterContainer: { paddingHorizontal: 16, marginBottom: 12 },
+  deckFilterScroll: { paddingBottom: 12 },
+  deckChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1.5,
+  },
   item: {
     borderRadius: 14,
     padding: 16,
