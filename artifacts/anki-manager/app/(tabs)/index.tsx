@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useStorage } from '@/context/StorageContext';
 import { useProfile } from '@/context/ProfileContext';
+import { exportAnki } from '@/lib/exportAnki';
 import { DeckCard } from '@/components/DeckCard';
 import { SpeedDial } from '@/components/SpeedDial';
 import { DeckModal } from '@/components/DeckModal';
@@ -22,7 +23,7 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { decks, getNotesByDeck } = useStorage();
+  const { decks, notes, getNotesByDeck } = useStorage();
   const { activeProfile } = useProfile();
 
   const [deckModalVisible, setDeckModalVisible] = useState(false);
@@ -30,6 +31,8 @@ export default function HomeScreen() {
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
 
   const topPad = insets.top + (Platform.OS === 'web' ? 67 : 0);
+
+  const pendingCount = notes.filter((n) => !n.completed).length;
 
   const speedDialOptions = [
     {
@@ -41,6 +44,11 @@ export default function HomeScreen() {
       label: 'Nova Nota',
       icon: 'file-plus' as const,
       onPress: () => setNoteModalVisible(true),
+    },
+    {
+      label: `Baixar para Anki (${pendingCount})`,
+      icon: 'download' as const,
+      onPress: () => exportAnki(notes.filter((n) => !n.completed), decks),
     },
   ];
 

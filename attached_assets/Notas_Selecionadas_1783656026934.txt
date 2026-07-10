@@ -1,0 +1,30 @@
+#separator:tab
+#html:true
+#notetype column:1
+#deck column:2
+#tags column:5
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo I (Talita)	Lesões cerebelares	"Os principais sinais são: descoordenação dos membros superiores, com
+tremores de intenção (somente aparecem ao movimento), descoordenação dos membros inferiores (alteração
+da marcha denominada ataxia cerebelar, e dificuldade de permanecer em pé, ou disbasia), descoordenação
+da fala (disartria) e do bulbo do olho (nistagmo)."	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo I (Talita)	Estrutura que tem comunicação com o cerebelo e está envolvida na aprendizagem motora	Núcleo rubro	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Giro temporal transverso anterior	Área primária da audição	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Bordas do sulco calcarino	Área visual primária<br>	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Área de Wernicke	Área de entendimento da linguagem	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Parte posterior da ínsula	Área gustatória primária	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Estruturas que constituem o circuito de Papez	"Área entorrinal, giro do cíngulo, núcleos mamilares, formação hipocampal e núcleos talâmicos anteriores<br><img alt=""Teorias das Emoções"" src=""pap2d.gif"">"	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Giro pré-central	Execução do movimento	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Área pré-motora	Planejamento do movimento<br>	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Parte triangular e opercular do giro frontal inferior esquerdo	Programação motora da fala	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Lesão na área temporo-parietal direita	Síndrome de negligência	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Produção de movimentos sem coordenação&nbsp;	Ataxia	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Os movimentos usualmente passam da mrca pretendida; depois, a parte consciente do cérebro compensa de modo excessivo e na direção oposta	Dismetria	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Disdiadococinesia	Incapacidade de realizar movimentos rápidos alternados	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Disartria	Falha de progressão ao falar	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Nistagmo cerebelar	Tremor do globo ocular que ocorre quando se tenta fixar os olhos numa cena em um dos lados do campo visual. Ocorre quando há lesão dos lobos floculonodulares	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Hipotonia	Lesão dos núcleos cerebelares profundos	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Memória em que os conhecimentos memorizados são explícitos	Memória declarativa	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Memória em que os conhecimentos memorizados são implícitos, não podendo ser descritos conscientemente	Memória não declarativa ou de procedimentos	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Responsável pela dimensão temporal da memória	Giro denteado	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Funciona como um portão de entrada para o hipocampo. Ocupa a área 28 de Broadmann e é formado por arquicórtex.	Córtex entorrinal.	
+Basic (and reversed card)	SEGUNDO PERÍODO (Talita de Souza, 165)::NEUROANATO::Neuroanatomia: módulo II (Talita)	Responsável pela memorização de cenários novos	Córtex para-hipocampal	
