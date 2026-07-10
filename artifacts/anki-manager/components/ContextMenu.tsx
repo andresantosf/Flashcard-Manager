@@ -70,6 +70,11 @@ export function ContextMenu({
     setTimeout(action, 150);
   };
 
+  const handleDelete = () => {
+    setConfirmDeleteVisible(false);
+    handleAction(onDelete);
+  };
+
   const backdropOpacity = backdropAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 0.45],
@@ -127,30 +132,24 @@ export function ContextMenu({
 
       {confirmDeleteVisible ? (
         <View style={styles.confirmOverlay}>
-          <Pressable style={styles.confirmOverlay} onPress={() => setConfirmDeleteVisible(false)}>
-            <View style={[styles.confirmBox, { backgroundColor: colors.card }]}> 
-              <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Excluir cartão</Text>
-              <Text style={[styles.confirmMessage, { color: colors.mutedForeground }]}>Tem certeza que deseja excluir este cartão?</Text>
-              <View style={styles.confirmActions}>
-                <Pressable
-                  onPress={() => setConfirmDeleteVisible(false)}
-                  style={({ pressed }) => [styles.confirmButton, { opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <Text style={[styles.confirmButtonText, { color: colors.foreground }]}>Cancelar</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    setConfirmDeleteVisible(false);
-                    onClose();
-                    onDelete();
-                  }}
-                  style={({ pressed }) => [styles.confirmButton, styles.confirmDeleteButton, { opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <Text style={[styles.confirmDeleteText]}>Excluir</Text>
-                </Pressable>
-              </View>
+          <View style={[styles.confirmBox, { backgroundColor: colors.card }]}> 
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Excluir cartão</Text>
+            <Text style={[styles.confirmMessage, { color: colors.mutedForeground }]}>Tem certeza que deseja excluir este cartão?</Text>
+            <View style={styles.confirmActions}>
+              <Pressable
+                onPress={() => setConfirmDeleteVisible(false)}
+                style={({ pressed }) => [styles.confirmButton, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={[styles.confirmButtonText, { color: colors.foreground }]}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleDelete}
+                style={({ pressed }) => [styles.confirmButton, styles.confirmDeleteButton, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={[styles.confirmDeleteText]}>Excluir</Text>
+              </Pressable>
             </View>
-          </Pressable>
+          </View>
         </View>
       ) : null}
     </Modal>

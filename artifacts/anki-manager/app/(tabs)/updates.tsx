@@ -377,20 +377,24 @@ export default function UpdatesScreen() {
         visible={!!contextNote && !editNote}
         onClose={() => setContextNote(null)}
         onEdit={() => {
-          setEditNote(contextNote);
-          setContextNote(null);
+          if (contextNote) {
+            setEditNote(contextNote);
+            setContextNote(null);
+          }
         }}
         onToggleCompleted={async () => {
           if (contextNote) {
-            await toggleNoteCompleted(contextNote.id);
+            const noteId = contextNote.id;
             setContextNote(null);
+            await toggleNoteCompleted(noteId);
           }
         }}
         onDelete={async () => {
           if (contextNote) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            await deleteNote(contextNote.id);
+            const noteId = contextNote.id;
             setContextNote(null);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            await deleteNote(noteId);
           }
         }}
         isCompleted={contextNote?.completed ?? false}
