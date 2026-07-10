@@ -143,6 +143,8 @@ function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
 }
 
 export default function UpdatesScreen() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { notes, decks } = useStorage();
   const { activeProfile } = useProfile();
 
@@ -356,6 +358,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
     borderWidth: 1.5,
   },
+  deckChipDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  deckChipText: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+  },
   item: {
     borderRadius: 14,
     padding: 16,
@@ -417,24 +428,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     lineHeight: 20,
   },
-  empty: {
-    marginTop: 80,
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    gap: 10,
-  },
-  emptyIcon: { fontSize: 56, marginBottom: 8 },
-  emptyTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter_600SemiBold',
-    textAlign: 'center',
-  },
-  emptySub: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
   feedImageWrapper: {
     marginTop: 12,
     borderRadius: 14,
@@ -474,6 +467,24 @@ const styles = StyleSheet.create({
   modalImage: {
     width: '100%',
     height: '100%',
+  },
+  empty: {
+    marginTop: 80,
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    gap: 10,
+  },
+  emptyIcon: { fontSize: 56, marginBottom: 8 },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_600SemiBold',
+    textAlign: 'center',
+  },
+  emptySub: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   loadingMore: {
     textAlign: 'center',

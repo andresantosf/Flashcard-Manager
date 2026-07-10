@@ -85,7 +85,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
           if (imageUrl) {
             try {
               if (!imageUrl.startsWith('http')) {
-                updates.imageUrl = await uploadImage(imageUrl, noteToEdit.id);
+                updates.imageUrl = await uploadImage(imageUrl);
               } else {
                 updates.imageUrl = imageUrl;
               }
@@ -96,7 +96,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
               Alert.alert('Erro', 'Não foi possível enviar a imagem. Tente novamente.');
             }
           } else {
-            updates.imageUrl = deleteField();
+            updates.imageUrl = undefined;
           }
         }
 
