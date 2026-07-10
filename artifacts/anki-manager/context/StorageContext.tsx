@@ -8,17 +8,17 @@ import React, {
 import {
   collection,
   onSnapshot,
-  addDoc,
   updateDoc,
   deleteDoc,
   doc,
+  setDoc,
   query,
   orderBy,
   writeBatch,
   getDocs,
   where,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, uploadImage } from '@/lib/firebase';
 
 export interface Deck {
   id: string;
@@ -39,6 +39,7 @@ export interface Note {
   authorName?: string;
   authorColor?: string;
   authorInitials?: string;
+  imageUrl?: string;
 }
 
 export interface NoteAuthor {
@@ -55,7 +56,13 @@ interface StorageContextType {
   createDeck: (name: string, color: string) => Promise<void>;
   updateDeck: (id: string, updates: Partial<Omit<Deck, 'id'>>) => Promise<void>;
   deleteDeck: (id: string) => Promise<void>;
-  createNote: (deckId: string, front: string, back: string, author: NoteAuthor) => Promise<void>;
+  createNote: (
+    deckId: string,
+    front: string,
+    back: string,
+    author: NoteAuthor,
+    imageUri?: string,
+  ) => Promise<void>;
   updateNote: (id: string, updates: Partial<Omit<Note, 'id'>>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   toggleNoteCompleted: (id: string) => Promise<void>;
@@ -117,8 +124,15 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const createNote = useCallback(
-    async (deckId: string, front: string, back: string, author: NoteAuthor) => {
-      await addDoc(collection(db, NOTES), {
+    async (
+      deckId: string,
+      front: string,
+      back: string,
+      author: NoteAuthor,
+      imageUri?: string,
+    ) => {
+      const noteRef = doc(collection(db, NOTES));
+      const noteData: Partial<Note> = {
         deckId,
         front,
         back,
@@ -128,7 +142,13 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
         authorName: author.name,
         authorColor: author.color,
         authorInitials: author.initials,
-      });
+      };
+
+      if (imageUri) {
+        noteData.imageUrl = await uploadImage(imageUri, noteRef.id);
+      }
+
+      await setDoc(noteRef, noteData);
     },
     [],
   );

@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { initializeApp, getApps } from 'firebase/app';
 import { initializeFirestore } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import googleServices from '../google-services.json';
 
 const extra = (Constants.expoConfig?.extra ?? Constants.manifest?.extra ?? {}) as Record<string, string | undefined>;
@@ -47,4 +48,15 @@ const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
 
-export { db };
+const storage = getStorage(app);
+
+export async function uploadImage(uri: string, noteId: string) {
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  const fileName = `${noteId}/${Date.now()}`;
+  const imageRef = ref(storage, `notes/${fileName}`);
+  const snapshot = await uploadBytes(imageRef, blob);
+  return getDownloadURL(snapshot.ref);
+}
+
+export { db, storage };

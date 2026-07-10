@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -13,9 +15,12 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import { deleteField } from 'firebase/firestore';
 import { useColors } from '@/hooks/useColors';
 import { useStorage, type Note } from '@/context/StorageContext';
 import { useProfile } from '@/context/ProfileContext';
+import { uploadImage } from '@/lib/firebase';
 
 interface NoteModalProps {
   visible: boolean;
@@ -32,6 +37,8 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
 
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageChanged, setImageChanged] = useState(false);
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const slideAnim = useRef(new Animated.Value(600)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -45,6 +52,8 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
     if (visible) {
       setFront(noteToEdit?.front ?? '');
       setBack(noteToEdit?.back ?? '');
+      setImageUrl(noteToEdit?.imageUrl ?? null);
+      setImageChanged(false);
       setSelectedDeckId(noteToEdit?.deckId ?? deckId ?? decks[0]?.id ?? '');
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 70, friction: 10 }),
@@ -69,11 +78,24 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
       if (selectedDeckId && selectedDeckId !== noteToEdit.deckId) {
         updates.deckId = selectedDeckId;
       }
+
+      if (imageChanged) {
+        if (imageUrl) {
+          if (!imageUrl.startsWith('http')) {
+            updates.imageUrl = await uploadImage(imageUrl, noteToEdit.id);
+          } else {
+            updates.imageUrl = imageUrl;
+          }
+        } else {
+          updates.imageUrl = deleteField();
+        }
+      }
+
       await updateNote(noteToEdit.id, updates);
     } else {
       const targetDeckId = deckId ?? selectedDeckId;
       if (!targetDeckId) return;
-      await createNote(targetDeckId, f, b, activeProfile);
+      await createNote(targetDeckId, f, b, activeProfile, imageUrl ?? undefined);
     }
     onClose();
   };
@@ -199,6 +221,62 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
               numberOfLines={3}
               textAlignVertical="top"
             />
+
+            <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>IMAGEM</Text>
+            {imageUrl ? (
+              <View style={styles.imagePreviewWrapper}>
+                <Image source={{ uri: imageUrl }} style={styles.imagePreview} />
+                <Pressable
+                  onPress={() => {
+                    setImageUrl(null);
+                    setImageChanged(true);
+                  }}
+                  style={({ pressed }) => [
+                    styles.imageButton,
+                    {
+                      backgroundColor: colors.secondary,
+                      opacity: pressed ? 0.75 : 1,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.imageButtonText, { color: colors.foreground }]}>Remover imagem</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            <Pressable
+              onPress={async () => {
+                const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (!permission.granted) {
+                  Alert.alert(
+                    'Permissão necessária',
+                    'Permita o acesso às imagens para anexar fotos ao cartão.',
+                  );
+                  return;
+                }
+
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  quality: 0.7,
+                  allowsEditing: false,
+                });
+
+                if (result.canceled || result.assets.length === 0) return;
+                setImageUrl(result.assets[0].uri);
+                setImageChanged(true);
+              }}
+              style={({ pressed }) => [
+                styles.imageButton,
+                {
+                  backgroundColor: colors.secondary,
+                  opacity: pressed ? 0.75 : 1,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.imageButtonText, { color: colors.foreground }]}>Selecionar imagem</Text>
+            </Pressable>
           </ScrollView>
 
           <View style={styles.actions}>
@@ -218,7 +296,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
                 { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 },
               ]}
             >
-              <Text style={[styles.btnText, { color: colors.primaryForeground }]}>
+              <Text style={[styles.btnText, { color: colors.primaryForeground }]}> 
                 {isEdit ? 'Salvar' : 'Adicionar'}
               </Text>
             </Pressable>
@@ -281,6 +359,27 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     minHeight: 80,
+  },
+  imagePreviewWrapper: {
+    marginBottom: 16,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 180,
+    borderRadius: 16,
+    marginBottom: 10,
+    backgroundColor: '#000',
+  },
+  imageButton: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  imageButtonText: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
   },
   actions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   btnSecondary: {

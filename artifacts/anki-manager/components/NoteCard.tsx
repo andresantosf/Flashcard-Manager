@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -99,6 +100,10 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
       >
         {note.back}
       </Text>
+
+      {note.imageUrl ? (
+        <Image source={{ uri: note.imageUrl }} style={styles.noteImage} />
+      ) : null}
     </Pressable>
   );
 }
@@ -152,5 +157,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
     lineHeight: 20,
+  },
+  noteImage: {
+    marginTop: 12,
+    width: '100%',
+    height: 160,
+    borderRadius: 16,
+    backgroundColor: '#000',
   },
 });
