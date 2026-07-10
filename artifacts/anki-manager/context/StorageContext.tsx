@@ -8,6 +8,7 @@ import React, {
 import {
   collection,
   onSnapshot,
+  addDoc,
   updateDoc,
   deleteDoc,
   doc,
