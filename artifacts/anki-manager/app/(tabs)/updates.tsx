@@ -99,9 +99,7 @@ function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
         style={[
           styles.front,
           { color: colors.foreground },
-          note.completed && styles.strikethrough,
         ]}
-        numberOfLines={2}
       >
         {note.front}
       </Text>
@@ -109,7 +107,7 @@ function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       {/* Back */}
-      <Text style={[styles.back, { color: colors.mutedForeground }]} numberOfLines={2}>
+      <Text style={[styles.back, { color: colors.mutedForeground }]}>
         {note.back}
       </Text>
     </Pressable>
@@ -133,7 +131,12 @@ export default function UpdatesScreen() {
   }, [decks]);
 
   const sorted = useMemo(
-    () => [...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    () => [...notes].sort((a, b) => {
+      if (a.completed === b.completed) {
+        return b.createdAt.localeCompare(a.createdAt);
+      }
+      return a.completed ? 1 : -1;
+    }),
     [notes],
   );
 
