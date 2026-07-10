@@ -144,7 +144,13 @@ export default function HomeScreen() {
         );
       })()}
 
-      <SpeedDial options={speedDialOptions} />
+      <SpeedDial
+        options={speedDialOptions}
+        onLongPress={() => {
+          setNoteModalDeckId(undefined);
+          setNoteModalVisible(true);
+        }}
+      />
 
       {/* Deck create / edit modal */}
       <DeckModal

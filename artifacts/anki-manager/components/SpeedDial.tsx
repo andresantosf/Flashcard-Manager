@@ -20,9 +20,10 @@ export interface SpeedDialOption {
 
 interface SpeedDialProps {
   options: SpeedDialOption[];
+  onLongPress?: () => void;
 }
 
-export function SpeedDial({ options }: SpeedDialProps) {
+export function SpeedDial({ options, onLongPress }: SpeedDialProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
@@ -135,6 +136,14 @@ export function SpeedDial({ options }: SpeedDialProps) {
         {/* Main FAB */}
         <Pressable
           onPress={toggle}
+          onLongPress={() => {
+            if (onLongPress) {
+              close();
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              onLongPress();
+            }
+          }}
+          delayLongPress={350}
           style={({ pressed }) => [
             styles.fab,
             {
