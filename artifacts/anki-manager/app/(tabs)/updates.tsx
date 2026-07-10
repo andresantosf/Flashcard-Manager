@@ -139,6 +139,10 @@ function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
         </Modal>
       ) : null}
     </>
+  );
+}
+
+export default function UpdatesScreen() {
   const { notes, decks } = useStorage();
   const { activeProfile } = useProfile();
 
