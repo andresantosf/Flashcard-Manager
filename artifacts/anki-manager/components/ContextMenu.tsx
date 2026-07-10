@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import {
+  Alert,
   Animated,
   Modal,
   Pressable,
@@ -110,7 +111,19 @@ export function ContextMenu({
           icon="trash-2"
           label="Excluir"
           color={colors.destructive}
-          onPress={() => handleAction(onDelete)}
+          onPress={() => {
+            onClose();
+            setTimeout(() => {
+              Alert.alert(
+                'Excluir cartão',
+                'Tem certeza que deseja excluir este cartão?',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Excluir', style: 'destructive', onPress: onDelete },
+                ],
+              );
+            }, 150);
+          }}
         />
 
         <Pressable
