@@ -386,25 +386,11 @@ export default function UpdatesScreen() {
             setContextNote(null);
           }
         }}
-        onDelete={() => {
+        onDelete={async () => {
           if (contextNote) {
-            const note = contextNote;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            await deleteNote(contextNote.id);
             setContextNote(null);
-            Alert.alert(
-              'Excluir cartão',
-              'Tem certeza que quer excluir este cartão? Esta ação não pode ser desfeita.',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'Excluir',
-                  style: 'destructive',
-                  onPress: async () => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    await deleteNote(note.id);
-                  },
-                },
-              ],
-            );
           }
         }}
         isCompleted={contextNote?.completed ?? false}

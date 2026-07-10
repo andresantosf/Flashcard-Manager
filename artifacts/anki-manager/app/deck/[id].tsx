@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   FlatList,
   Platform,
   Pressable,
@@ -70,23 +69,10 @@ export default function DeckScreen() {
     );
   }
 
-  const handleDeleteDeck = () => {
-    Alert.alert(
-      'Excluir baralho',
-      `Tem certeza que quer excluir "${deck.name}"? Todos os cartões dentro dele também serão excluídos permanentemente.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            await deleteDeck(deck.id);
-            router.back();
-          },
-        },
-      ],
-    );
+  const handleDeleteDeck = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    await deleteDeck(deck.id);
+    router.back();
   };
 
   return (
@@ -198,25 +184,11 @@ export default function DeckScreen() {
             setContextNote(null);
           }
         }}
-        onDelete={() => {
+        onDelete={async () => {
           if (contextNote) {
-            const note = contextNote;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            await deleteNote(contextNote.id);
             setContextNote(null);
-            Alert.alert(
-              'Excluir cartão',
-              'Tem certeza que quer excluir este cartão? Esta ação não pode ser desfeita.',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'Excluir',
-                  style: 'destructive',
-                  onPress: async () => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    await deleteNote(note.id);
-                  },
-                },
-              ],
-            );
           }
         }}
         isCompleted={contextNote?.completed ?? false}
