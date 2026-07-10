@@ -51,11 +51,16 @@ const db = initializeFirestore(app, {
 const storage = getStorage(app);
 
 export async function uploadImage(uri: string, noteId: string) {
+  // Fetch the file and convert to ArrayBuffer so it works in React Native/Expo
   const response = await fetch(uri);
-  const blob = await response.blob();
+  if (!response.ok) throw new Error(`Failed to fetch image URI: ${response.status}`);
+  const contentType = response.headers.get('Content-Type') ?? undefined;
+  const arrayBuffer = await response.arrayBuffer();
+  const uint8 = new Uint8Array(arrayBuffer);
   const fileName = `${noteId}/${Date.now()}`;
   const imageRef = ref(storage, `notes/${fileName}`);
-  const snapshot = await uploadBytes(imageRef, blob);
+  const metadata = contentType ? { contentType } : undefined;
+  const snapshot = await uploadBytes(imageRef, uint8, metadata);
   return getDownloadURL(snapshot.ref);
 }
 

@@ -45,6 +45,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
   const backInputRef = useRef<TextInput>(null);
 
   const isEdit = !!noteToEdit;
+  const [saving, setSaving] = useState(false);
   // Show deck picker when creating without a deck context, or always when editing
   const showDeckPicker = (!deckId || isEdit) && decks.length > 0;
 
@@ -72,32 +73,56 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
     const b = back.trim();
     if (!f || !b) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSaving(true);
+    try {
+      if (isEdit && noteToEdit) {
+        const updates: Partial<Note> = { front: f, back: b };
+        if (selectedDeckId && selectedDeckId !== noteToEdit.deckId) {
+          updates.deckId = selectedDeckId;
+        }
 
-    if (isEdit && noteToEdit) {
-      const updates: Partial<Note> = { front: f, back: b };
-      if (selectedDeckId && selectedDeckId !== noteToEdit.deckId) {
-        updates.deckId = selectedDeckId;
-      }
-
-      if (imageChanged) {
-        if (imageUrl) {
-          if (!imageUrl.startsWith('http')) {
-            updates.imageUrl = await uploadImage(imageUrl, noteToEdit.id);
+        if (imageChanged) {
+          if (imageUrl) {
+            try {
+              if (!imageUrl.startsWith('http')) {
+                updates.imageUrl = await uploadImage(imageUrl, noteToEdit.id);
+              } else {
+                updates.imageUrl = imageUrl;
+              }
+            } catch (err) {
+              // log and surface error to user
+              // eslint-disable-next-line no-console
+              console.error('uploadImage failed during edit', err);
+              Alert.alert('Erro', 'Não foi possível enviar a imagem. Tente novamente.');
+            }
           } else {
-            updates.imageUrl = imageUrl;
+            updates.imageUrl = deleteField();
           }
-        } else {
-          updates.imageUrl = deleteField();
+        }
+
+        await updateNote(noteToEdit.id, updates);
+      } else {
+        const targetDeckId = deckId ?? selectedDeckId;
+        if (!targetDeckId) return;
+        try {
+          await createNote(targetDeckId, f, b, activeProfile, imageUrl ?? undefined);
+        } catch (err) {
+          // creation failed — show error
+          // eslint-disable-next-line no-console
+          console.error('createNote failed', err);
+          Alert.alert('Erro', 'Não foi possível criar o cartão. Tente novamente.');
+          return;
         }
       }
-
-      await updateNote(noteToEdit.id, updates);
-    } else {
-      const targetDeckId = deckId ?? selectedDeckId;
-      if (!targetDeckId) return;
-      await createNote(targetDeckId, f, b, activeProfile, imageUrl ?? undefined);
+      onClose();
+    } catch (err) {
+      // generic catch
+      // eslint-disable-next-line no-console
+      console.error('handleSave error', err);
+      Alert.alert('Erro', 'Ocorreu um erro ao salvar o cartão.');
+    } finally {
+      setSaving(false);
     }
-    onClose();
   };
 
   const backdropOpacity = backdropAnim.interpolate({
@@ -290,14 +315,14 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
               <Text style={[styles.btnText, { color: colors.foreground }]}>Cancelar</Text>
             </Pressable>
             <Pressable
-              onPress={handleSave}
+              onPress={() => { if (!saving) handleSave(); }}
               style={({ pressed }) => [
                 styles.btnPrimary,
-                { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 },
+                { backgroundColor: colors.primary, opacity: pressed || saving ? 0.7 : 1 },
               ]}
             >
               <Text style={[styles.btnText, { color: colors.primaryForeground }]}> 
-                {isEdit ? 'Salvar' : 'Adicionar'}
+                {saving ? 'Salvando...' : isEdit ? 'Salvar' : 'Adicionar'}
               </Text>
             </Pressable>
           </View>

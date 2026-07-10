@@ -146,6 +146,7 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
       };
 
       if (imageUri) {
+        // Let upload errors propagate to the caller so the UI can surface them.
         noteData.imageUrl = await uploadImage(imageUri, noteRef.id);
       }
 
