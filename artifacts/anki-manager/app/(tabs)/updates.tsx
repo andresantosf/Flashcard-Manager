@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
   FlatList,
   Image,
   Modal,
@@ -167,27 +166,6 @@ export default function UpdatesScreen() {
 
   const [page, setPage] = useState(1);
   const [editNote, setEditNote] = useState<Note | null>(null);
-
-  const handleDeleteNote = () => {
-    if (!contextNote) return;
-    const noteId = contextNote.id;
-    setContextNote(null);
-    Alert.alert(
-      'Excluir cartão',
-      'Tem certeza que deseja excluir este cartão?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            await deleteNote(noteId);
-          },
-        },
-      ],
-    );
-  };
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [selectedDeckId, setSelectedDeckId] = useState<string>('all');
 
@@ -399,19 +377,36 @@ export default function UpdatesScreen() {
         visible={!!contextNote && !editNote}
         onClose={() => setContextNote(null)}
         onEdit={() => {
-          if (contextNote) {
-            setEditNote(contextNote);
-            setContextNote(null);
-          }
+          setEditNote(contextNote);
+          setContextNote(null);
         }}
         onToggleCompleted={async () => {
           if (contextNote) {
-            const noteId = contextNote.id;
+            await toggleNoteCompleted(contextNote.id);
             setContextNote(null);
-            await toggleNoteCompleted(noteId);
           }
         }}
-        onDelete={handleDeleteNote}
+        onDelete={() => {
+          if (contextNote) {
+            const note = contextNote;
+            setContextNote(null);
+            Alert.alert(
+              'Excluir cartão',
+              'Tem certeza que quer excluir este cartão? Esta ação não pode ser desfeita.',
+              [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                  text: 'Excluir',
+                  style: 'destructive',
+                  onPress: async () => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    await deleteNote(note.id);
+                  },
+                },
+              ],
+            );
+          }
+        }}
         isCompleted={contextNote?.completed ?? false}
       />
 

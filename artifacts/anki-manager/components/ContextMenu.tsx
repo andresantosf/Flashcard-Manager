@@ -123,7 +123,6 @@ export function ContextMenu({
           <Text style={[styles.cancelText, { color: colors.foreground }]}>Cancelar</Text>
         </Pressable>
       </Animated.View>
-
     </Modal>
   );
 }
@@ -197,51 +196,5 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
-  },
-  confirmOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  confirmBox: {
-    width: '85%',
-    borderRadius: 20,
-    padding: 20,
-    gap: 18,
-  },
-  confirmTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter_700Bold',
-  },
-  confirmMessage: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    lineHeight: 20,
-  },
-  confirmActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  confirmButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  confirmButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  confirmDeleteButton: {
-    backgroundColor: '#D93025',
-  },
-  confirmDeleteText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
   },
 });
