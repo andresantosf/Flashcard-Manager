@@ -160,7 +160,8 @@ function FeedItem({ note, deckName, deckColor, onPress, onLongPress }: FeedItemP
 export default function UpdatesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { notes, decks } = useStorage();
+  const { notes, decks, toggleNoteCompleted, deleteNote } = useStorage();
+  const [contextNote, setContextNote] = useState<Note | null>(null);
   const { activeProfile } = useProfile();
 
   const [page, setPage] = useState(1);
@@ -312,6 +313,7 @@ export default function UpdatesScreen() {
               deckName={deck?.name ?? 'Baralho removido'}
               deckColor={deck?.color ?? colors.mutedForeground}
               onPress={() => setEditNote(item)}
+              onLongPress={() => setContextNote(item)}
             />
           );
         }}
@@ -328,6 +330,29 @@ export default function UpdatesScreen() {
         visible={!!editNote}
         onClose={() => setEditNote(null)}
         noteToEdit={editNote ?? undefined}
+      />
+
+      <ContextMenu
+        visible={!!contextNote && !editNote}
+        onClose={() => setContextNote(null)}
+        onEdit={() => {
+          setEditNote(contextNote);
+          setContextNote(null);
+        }}
+        onToggleCompleted={async () => {
+          if (contextNote) {
+            await toggleNoteCompleted(contextNote.id);
+            setContextNote(null);
+          }
+        }}
+        onDelete={async () => {
+          if (contextNote) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            await deleteNote(contextNote.id);
+            setContextNote(null);
+          }
+        }}
+        isCompleted={contextNote?.completed ?? false}
       />
 
       <ProfileMenu
