@@ -20,7 +20,7 @@ import { deleteField } from 'firebase/firestore';
 import { useColors } from '@/hooks/useColors';
 import { useStorage, type Note } from '@/context/StorageContext';
 import { useProfile } from '@/context/ProfileContext';
-import { uploadImage } from '@/lib/firebase';
+import uploadImage from '@/lib/imgbb';
 
 interface NoteModalProps {
   visible: boolean;

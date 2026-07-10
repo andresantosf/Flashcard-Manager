@@ -1,7 +1,6 @@
 import Constants from 'expo-constants';
 import { initializeApp, getApps } from 'firebase/app';
 import { initializeFirestore } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import googleServices from '../google-services.json';
 
 const extra = (Constants.expoConfig?.extra ?? Constants.manifest?.extra ?? {}) as Record<string, string | undefined>;
@@ -48,20 +47,4 @@ const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
 
-const storage = getStorage(app);
-
-export async function uploadImage(uri: string, noteId: string) {
-  // Fetch the file and convert to ArrayBuffer so it works in React Native/Expo
-  const response = await fetch(uri);
-  if (!response.ok) throw new Error(`Failed to fetch image URI: ${response.status}`);
-  const contentType = response.headers.get('Content-Type') ?? undefined;
-  const arrayBuffer = await response.arrayBuffer();
-  const uint8 = new Uint8Array(arrayBuffer);
-  const fileName = `${noteId}/${Date.now()}`;
-  const imageRef = ref(storage, `notes/${fileName}`);
-  const metadata = contentType ? { contentType } : undefined;
-  const snapshot = await uploadBytes(imageRef, uint8, metadata);
-  return getDownloadURL(snapshot.ref);
-}
-
-export { db, storage };
+export { db };

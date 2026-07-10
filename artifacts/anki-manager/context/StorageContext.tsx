@@ -19,7 +19,8 @@ import {
   getDocs,
   where,
 } from 'firebase/firestore';
-import { db, uploadImage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
+import uploadImage from '@/lib/imgbb';
 
 export interface Deck {
   id: string;
