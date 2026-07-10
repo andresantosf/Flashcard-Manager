@@ -1,6 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Image,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -30,16 +31,18 @@ function formatDate(iso: string) {
 export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
   const colors = useColors();
   const wasLongPressed = useRef(false);
+  const [imageVisible, setImageVisible] = useState(false);
 
   return (
-    <Pressable
-      onPress={() => {
-        if (wasLongPressed.current) {
-          wasLongPressed.current = false;
-          return;
-        }
-        onPress();
-      }}
+    <>
+      <Pressable
+        onPress={() => {
+          if (wasLongPressed.current) {
+            wasLongPressed.current = false;
+            return;
+          }
+          onPress();
+        }}
       onLongPress={() => {
         wasLongPressed.current = true;
         onLongPress();
@@ -102,10 +105,31 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
       </Text>
 
       {note.imageUrl ? (
-        <Image source={{ uri: note.imageUrl }} style={styles.noteImage} />
+        <Pressable onPress={() => setImageVisible(true)} style={styles.imageWrapper}>
+          <Image source={{ uri: note.imageUrl }} style={styles.noteImage} />
+        </Pressable>
       ) : null}
     </Pressable>
-  );
+
+    {note.imageUrl ? (
+      <Modal visible={imageVisible} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setImageVisible(false)}>
+          <View style={styles.modalContent}>
+            <Pressable
+              onPress={() => setImageVisible(false)}
+              style={({ pressed }) => [
+                styles.closeButton,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Feather name="x" size={24} color="#fff" />
+            </Pressable>
+            <Image source={{ uri: note.imageUrl }} style={styles.modalImage} resizeMode="contain" />
+          </View>
+        </Pressable>
+      </Modal>
+    ) : null}
+  </>);
 }
 
 const styles = StyleSheet.create({
@@ -136,6 +160,39 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
+  },
+  imageWrapper: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    height: '75%',
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
   },
   date: {
     fontSize: 11,

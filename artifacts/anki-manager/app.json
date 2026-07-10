@@ -16,7 +16,9 @@
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "package": "com.andre_sants.ankimanager"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -40,7 +42,10 @@
       "firebaseProjectId": "flashcards-73c94",
       "firebaseStorageBucket": "flashcards-73c94.firebasestorage.app",
       "firebaseMessagingSenderId": "786866735077",
-      "firebaseAppId": "1:786866735077:android:e2d816db35c1c4c6b7110c"
+      "firebaseAppId": "1:786866735077:android:e2d816db35c1c4c6b7110c",
+      "eas": {
+        "projectId": "b547ced4-fa3d-49c4-9bb9-b8b143e78034"
+      }
     }
   }
 }

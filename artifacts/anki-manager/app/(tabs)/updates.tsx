@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
+  Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -38,86 +40,105 @@ interface FeedItemProps {
 
 function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
   const colors = useColors();
+  const [imageVisible, setImageVisible] = useState(false);
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.item,
-        {
-          backgroundColor: note.completed ? colors.muted : colors.card,
-          opacity: pressed ? 0.8 : 1,
-          borderLeftColor: note.completed ? colors.border : deckColor,
-        },
-      ]}
-    >
-      {/* Author + deck + date row */}
-      <View style={styles.itemHeader}>
-        {/* Author avatar */}
-        {note.authorInitials && note.authorColor ? (
-          <ProfileAvatar
-            photo={PROFILES.find((p) => p.id === note.authorId)?.photo}
-            initials={note.authorInitials}
-            color={note.authorColor}
-            size={26}
-          />
-        ) : (
-          <View style={[styles.avatarFallback, { backgroundColor: colors.border }]}>
-            <Feather name="user" size={12} color={colors.mutedForeground} />
-          </View>
-        )}
-
-        {/* Author name */}
-        <Text
-          style={[
-            styles.authorName,
-            { color: note.authorColor ?? colors.mutedForeground },
-          ]}
-          numberOfLines={1}
-        >
-          {note.authorName ?? '—'}
-        </Text>
-
-        {/* Deck badge */}
-        <View style={styles.deckBadge}>
-          <View style={[styles.deckDot, { backgroundColor: deckColor }]} />
-          <Text style={[styles.deckName, { color: deckColor }]} numberOfLines={1}>
-            {deckName}
-          </Text>
-        </View>
-
-        {note.completed && (
-          <Feather name="check-circle" size={13} color={colors.mutedForeground} />
-        )}
-      </View>
-
-      {/* Date */}
-      <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
-        {formatDateTime(note.createdAt)}
-      </Text>
-
-      {/* Front */}
-      <Text
-        style={[
-          styles.front,
-          { color: colors.foreground },
+    <>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.item,
+          {
+            backgroundColor: note.completed ? colors.muted : colors.card,
+            opacity: pressed ? 0.8 : 1,
+            borderLeftColor: note.completed ? colors.border : deckColor,
+          },
         ]}
       >
-        {note.front}
-      </Text>
+        {/* Author + deck + date row */}
+        <View style={styles.itemHeader}>
+          {/* Author avatar */}
+          {note.authorInitials && note.authorColor ? (
+            <ProfileAvatar
+              photo={PROFILES.find((p) => p.id === note.authorId)?.photo}
+              initials={note.authorInitials}
+              color={note.authorColor}
+              size={26}
+            />
+          ) : (
+            <View style={[styles.avatarFallback, { backgroundColor: colors.border }]}> 
+              <Feather name="user" size={12} color={colors.mutedForeground} />
+            </View>
+          )}
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          {/* Author name */}
+          <Text
+            style={[
+              styles.authorName,
+              { color: note.authorColor ?? colors.mutedForeground },
+            ]}
+            numberOfLines={1}
+          >
+            {note.authorName ?? '—'}
+          </Text>
 
-      {/* Back */}
-      <Text style={[styles.back, { color: colors.mutedForeground }]}>
-        {note.back}
-      </Text>
-    </Pressable>
-  );
-}
+          {/* Deck badge */}
+          <View style={styles.deckBadge}>
+            <View style={[styles.deckDot, { backgroundColor: deckColor }]} />
+            <Text style={[styles.deckName, { color: deckColor }]} numberOfLines={1}>
+              {deckName}
+            </Text>
+          </View>
 
-export default function UpdatesScreen() {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
+          {note.completed && (
+            <Feather name="check-circle" size={13} color={colors.mutedForeground} />
+          )}
+        </View>
+
+        {/* Date */}
+        <Text style={[styles.dateText, { color: colors.mutedForeground }]}> 
+          {formatDateTime(note.createdAt)}
+        </Text>
+
+        {/* Front */}
+        <Text
+          style={[
+            styles.front,
+            { color: colors.foreground },
+          ]}
+        >
+          {note.front}
+        </Text>
+
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+        {/* Back */}
+        <Text style={[styles.back, { color: colors.mutedForeground }]}> 
+          {note.back}
+        </Text>
+
+        {note.imageUrl ? (
+          <Pressable onPress={() => setImageVisible(true)} style={styles.feedImageWrapper}>
+            <Image source={{ uri: note.imageUrl }} style={styles.feedImage} />
+          </Pressable>
+        ) : null}
+      </Pressable>
+
+      {note.imageUrl ? (
+        <Modal visible={imageVisible} transparent animationType="fade">
+          <Pressable style={styles.modalOverlay} onPress={() => setImageVisible(false)}>
+            <View style={styles.modalContent}>
+              <Pressable
+                onPress={() => setImageVisible(false)}
+                style={({ pressed }) => [styles.closeButton, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Feather name="x" size={24} color="#fff" />
+              </Pressable>
+              <Image source={{ uri: note.imageUrl }} style={styles.modalImage} resizeMode="contain" />
+            </View>
+          </Pressable>
+        </Modal>
+      ) : null}
+    </>
   const { notes, decks } = useStorage();
   const { activeProfile } = useProfile();
 
@@ -409,6 +430,46 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  feedImageWrapper: {
+    marginTop: 12,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  feedImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: 14,
+    backgroundColor: '#000',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    height: '75%',
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
   },
   loadingMore: {
     textAlign: 'center',
