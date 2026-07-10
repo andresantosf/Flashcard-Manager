@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
-import { useStorage, type Note } from '@/context/StorageContext';
+import { useStorage, type Note, NO_DECK_ID, NO_DECK } from '@/context/StorageContext';
 import { useProfile, PROFILES } from '@/context/ProfileContext';
 import { NoteModal } from '@/components/NoteModal';
 import { ContextMenu } from '@/components/ContextMenu';
@@ -171,9 +171,16 @@ export default function UpdatesScreen() {
 
   const deckMap = useMemo(() => {
     const m: Record<string, { name: string; color: string }> = {};
+    // Always include the virtual "Sem baralho" entry
+    m[NO_DECK_ID] = { name: NO_DECK.name, color: NO_DECK.color };
     decks.forEach((d) => { m[d.id] = { name: d.name, color: d.color }; });
     return m;
   }, [decks]);
+
+  const hasNoDeckNotes = useMemo(
+    () => notes.some((n) => n.deckId === NO_DECK_ID),
+    [notes],
+  );
 
   const filteredNotes = useMemo(() => {
     if (selectedDeckId === 'all') return notes;
@@ -281,6 +288,40 @@ export default function UpdatesScreen() {
               </Pressable>
             );
           })}
+
+          {/* "Sem baralho" chip — visible only when such notes exist */}
+          {hasNoDeckNotes && (() => {
+            const selected = selectedDeckId === NO_DECK_ID;
+            return (
+              <Pressable
+                key={NO_DECK_ID}
+                onPress={() => setSelectedDeckId(NO_DECK_ID)}
+                style={({ pressed }) => [
+                  styles.deckChip,
+                  {
+                    backgroundColor: selected ? NO_DECK.color + '22' : colors.secondary,
+                    borderColor: selected ? NO_DECK.color : 'transparent',
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <Feather
+                  name="inbox"
+                  size={11}
+                  color={selected ? NO_DECK.color : colors.mutedForeground}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[
+                    styles.deckChipText,
+                    { color: selected ? NO_DECK.color : colors.foreground },
+                  ]}
+                >
+                  {NO_DECK.name}
+                </Text>
+              </Pressable>
+            );
+          })()}
         </ScrollView>
       </View>
 

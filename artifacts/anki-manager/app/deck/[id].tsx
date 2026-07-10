@@ -12,7 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
-import { useStorage, type Note } from '@/context/StorageContext';
+import { useStorage, type Note, NO_DECK_ID, NO_DECK } from '@/context/StorageContext';
 import { NoteCard } from '@/components/NoteCard';
 import { SpeedDial } from '@/components/SpeedDial';
 import { NoteModal } from '@/components/NoteModal';
@@ -30,7 +30,9 @@ export default function DeckScreen() {
     useStorage();
   const { activeProfile } = useProfile();
 
-  const deck = decks.find((d) => d.id === id);
+  // Support the virtual "Sem baralho" deck that lives only in the client
+  const isVirtualDeck = id === NO_DECK_ID;
+  const deck = isVirtualDeck ? NO_DECK : decks.find((d) => d.id === id);
   const notes = deck
     ? [...getNotesByDeck(deck.id)].sort((a, b) => {
         if (a.completed === b.completed) {
@@ -92,13 +94,15 @@ export default function DeckScreen() {
                   size={30}
                 />
               </Pressable>
-              {/* More options */}
-              <Pressable
-                onPress={() => setEditDeckVisible(true)}
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-              >
-                <Feather name="more-horizontal" size={22} color={colors.foreground} />
-              </Pressable>
+              {/* More options — hidden for the virtual deck */}
+              {!isVirtualDeck && (
+                <Pressable
+                  onPress={() => setEditDeckVisible(true)}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                >
+                  <Feather name="more-horizontal" size={22} color={colors.foreground} />
+                </Pressable>
+              )}
             </View>
           ),
         }}

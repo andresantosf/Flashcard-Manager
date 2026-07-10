@@ -71,6 +71,17 @@ interface StorageContextType {
   getNotesByDeck: (deckId: string) => Note[];
 }
 
+/** Virtual deck id — notes without a real deck are stored under this id */
+export const NO_DECK_ID = '__no_deck__';
+
+/** Synthetic Deck object representing "no deck assigned" */
+export const NO_DECK: Deck = {
+  id: NO_DECK_ID,
+  name: 'Sem baralho',
+  color: '#9CA3AF',
+  createdAt: '',
+};
+
 const StorageContext = createContext<StorageContextType | null>(null);
 
 const DECKS = 'decks';

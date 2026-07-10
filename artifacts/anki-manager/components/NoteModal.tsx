@@ -14,11 +14,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { deleteField } from 'firebase/firestore';
 import { useColors } from '@/hooks/useColors';
-import { useStorage, type Note } from '@/context/StorageContext';
+import { useStorage, type Note, NO_DECK_ID, NO_DECK } from '@/context/StorageContext';
 import { useProfile } from '@/context/ProfileContext';
 import uploadImage from '@/lib/imgbb';
 
@@ -46,8 +47,8 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
 
   const isEdit = !!noteToEdit;
   const [saving, setSaving] = useState(false);
-  // Show deck picker when creating without a deck context, or always when editing
-  const showDeckPicker = (!deckId || isEdit) && decks.length > 0;
+  // Always show deck picker — NO_DECK is always available even with no real decks
+  const showDeckPicker = true;
 
   useEffect(() => {
     if (visible) {
@@ -55,7 +56,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
       setBack(noteToEdit?.back ?? '');
       setImageUrl(noteToEdit?.imageUrl ?? null);
       setImageChanged(false);
-      setSelectedDeckId(noteToEdit?.deckId ?? deckId ?? decks[0]?.id ?? '');
+      setSelectedDeckId(noteToEdit?.deckId ?? deckId ?? NO_DECK_ID);
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 70, friction: 10 }),
         Animated.timing(backdropAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -102,7 +103,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
 
         await updateNote(noteToEdit.id, updates);
       } else {
-        const targetDeckId = deckId ?? selectedDeckId;
+        const targetDeckId = selectedDeckId || deckId || NO_DECK_ID;
         if (!targetDeckId) return;
         try {
           await createNote(targetDeckId, f, b, activeProfile, imageUrl ?? undefined);
@@ -169,6 +170,40 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
                   showsHorizontalScrollIndicator={false}
                   style={styles.deckPicker}
                 >
+                  {/* Virtual "Sem baralho" chip — always first */}
+                  {(() => {
+                    const d = NO_DECK;
+                    const selected = selectedDeckId === d.id;
+                    return (
+                      <Pressable
+                        key={d.id}
+                        onPress={() => setSelectedDeckId(d.id)}
+                        style={[
+                          styles.deckChip,
+                          {
+                            backgroundColor: selected ? d.color + '22' : colors.secondary,
+                            borderColor: selected ? d.color : 'transparent',
+                          },
+                        ]}
+                      >
+                        <Feather
+                          name="inbox"
+                          size={12}
+                          color={selected ? d.color : colors.mutedForeground}
+                          style={{ marginRight: 4 }}
+                        />
+                        <Text
+                          style={[
+                            styles.deckChipText,
+                            { color: selected ? d.color : colors.foreground },
+                          ]}
+                        >
+                          {d.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })()}
+
                   {decks.map((d) => {
                     const selected = selectedDeckId === d.id;
                     return (

@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
-import { useStorage, type Deck } from '@/context/StorageContext';
+import { useStorage, type Deck, NO_DECK_ID, NO_DECK } from '@/context/StorageContext';
 import { useProfile } from '@/context/ProfileContext';
 import { DeckCard } from '@/components/DeckCard';
 import { SpeedDial } from '@/components/SpeedDial';
@@ -96,35 +96,53 @@ export default function HomeScreen() {
       </View>
 
       {/* Deck list */}
-      <FlatList
-        data={decks}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.list,
-          { paddingBottom: 120 + (insets.bottom || 0) },
-        ]}
-        scrollEnabled={decks.length > 0}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={[styles.emptyIcon, { color: colors.border }]}>▤</Text>
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              Nenhum baralho ainda
-            </Text>
-            <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-              Toque no + para criar seu primeiro baralho
-            </Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <DeckCard
-            deck={item}
-            cardCount={getNotesByDeck(item.id).length}
-            onPress={() => router.push(`/deck/${item.id}`)}
-            onLongPress={() => setContextDeck(item)}
+      {(() => {
+        const noDeckCount = getNotesByDeck(NO_DECK_ID).length;
+        const hasAnyContent = decks.length > 0 || noDeckCount > 0;
+        return (
+          <FlatList
+            data={decks}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: 120 + (insets.bottom || 0) },
+            ]}
+            scrollEnabled={hasAnyContent}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              noDeckCount === 0 ? (
+                <View style={styles.empty}>
+                  <Text style={[styles.emptyIcon, { color: colors.border }]}>▤</Text>
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                    Nenhum baralho ainda
+                  </Text>
+                  <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+                    Toque no + para criar seu primeiro baralho
+                  </Text>
+                </View>
+              ) : null
+            }
+            ListFooterComponent={
+              noDeckCount > 0 ? (
+                <DeckCard
+                  deck={NO_DECK}
+                  cardCount={noDeckCount}
+                  onPress={() => router.push(`/deck/${NO_DECK_ID}`)}
+                  onLongPress={() => setContextDeck(NO_DECK)}
+                />
+              ) : null
+            }
+            renderItem={({ item }) => (
+              <DeckCard
+                deck={item}
+                cardCount={getNotesByDeck(item.id).length}
+                onPress={() => router.push(`/deck/${item.id}`)}
+                onLongPress={() => setContextDeck(item)}
+              />
+            )}
           />
-        )}
-      />
+        );
+      })()}
 
       <SpeedDial options={speedDialOptions} />
 
