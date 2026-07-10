@@ -3,7 +3,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { initializeFirestore } from 'firebase/firestore';
 import googleServices from '../google-services.json';
 
-const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string | undefined>;
+const extra = (Constants.expoConfig?.extra ?? Constants.manifest?.extra ?? {}) as Record<string, string | undefined>;
 const projectInfo = googleServices.project_info ?? {};
 const googleClient = googleServices.client?.[0];
 const googleApiKey = googleClient?.api_key?.[0]?.current_key;

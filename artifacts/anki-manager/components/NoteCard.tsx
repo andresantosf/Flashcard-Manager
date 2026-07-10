@@ -48,7 +48,9 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
         styles.card,
         {
           backgroundColor: colors.card,
-          opacity: note.completed ? 0.5 : pressed ? 0.8 : 1,
+          opacity: pressed ? 0.8 : 1,
+          borderWidth: note.completed ? 2 : 0,
+          borderColor: note.completed ? colors.success : 'transparent',
         },
       ]}
     >
@@ -82,7 +84,6 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
         style={[
           styles.front,
           { color: colors.foreground },
-          note.completed && styles.strikethrough,
         ]}
         numberOfLines={2}
       >
