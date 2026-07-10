@@ -31,7 +31,14 @@ export default function DeckScreen() {
   const { activeProfile } = useProfile();
 
   const deck = decks.find((d) => d.id === id);
-  const notes = deck ? getNotesByDeck(deck.id) : [];
+  const notes = deck
+    ? [...getNotesByDeck(deck.id)].sort((a, b) => {
+        if (a.completed === b.completed) {
+          return a.createdAt.localeCompare(b.createdAt);
+        }
+        return a.completed ? 1 : -1;
+      })
+    : [];
 
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [editDeckVisible, setEditDeckVisible] = useState(false);
