@@ -1,6 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Modal,
   Pressable,
@@ -32,6 +31,7 @@ export function ContextMenu({
   const colors = useColors();
   const slideAnim = useRef(new Animated.Value(400)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -111,19 +111,7 @@ export function ContextMenu({
           icon="trash-2"
           label="Excluir"
           color={colors.destructive}
-          onPress={() => {
-            onClose();
-            setTimeout(() => {
-              Alert.alert(
-                'Excluir cartão',
-                'Tem certeza que deseja excluir este cartão?',
-                [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Excluir', style: 'destructive', onPress: onDelete },
-                ],
-              );
-            }, 150);
-          }}
+          onPress={() => setConfirmDeleteVisible(true)}
         />
 
         <Pressable
@@ -135,7 +123,45 @@ export function ContextMenu({
         >
           <Text style={[styles.cancelText, { color: colors.foreground }]}>Cancelar</Text>
         </Pressable>
+        <Pressable
+          onPress={onClose}
+          style={({ pressed }) => [
+            styles.cancelBtn,
+            { backgroundColor: colors.secondary, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Text style={[styles.cancelText, { color: colors.foreground }]}>Cancelar</Text>
+        </Pressable>
       </Animated.View>
+
+      {confirmDeleteVisible ? (
+        <Modal visible transparent animationType="fade" statusBarTranslucent>
+          <Pressable style={styles.confirmOverlay} onPress={() => setConfirmDeleteVisible(false)}>
+            <View style={[styles.confirmBox, { backgroundColor: colors.card }]}> 
+              <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Excluir cartão</Text>
+              <Text style={[styles.confirmMessage, { color: colors.mutedForeground }]}>Tem certeza que deseja excluir este cartão?</Text>
+              <View style={styles.confirmActions}>
+                <Pressable
+                  onPress={() => setConfirmDeleteVisible(false)}
+                  style={({ pressed }) => [styles.confirmButton, { opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Text style={[styles.confirmButtonText, { color: colors.foreground }]}>Cancelar</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setConfirmDeleteVisible(false);
+                    onClose();
+                    onDelete();
+                  }}
+                  style={({ pressed }) => [styles.confirmButton, styles.confirmDeleteButton, { opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Text style={[styles.confirmDeleteText]}>Excluir</Text>
+                </Pressable>
+              </View>
+            </View>
+          </Pressable>
+        </Modal>
+      ) : null}
     </Modal>
   );
 }
@@ -209,5 +235,51 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
+  },
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmBox: {
+    width: '85%',
+    borderRadius: 20,
+    padding: 20,
+    gap: 18,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+  },
+  confirmMessage: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 20,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  confirmButtonText: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  confirmDeleteButton: {
+    backgroundColor: '#D93025',
+  },
+  confirmDeleteText: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#fff',
   },
 });
