@@ -7,14 +7,17 @@ interface DeckCardProps {
   deck: Deck;
   cardCount: number;
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
-export function DeckCard({ deck, cardCount, onPress }: DeckCardProps) {
+export function DeckCard({ deck, cardCount, onPress, onLongPress }: DeckCardProps) {
   const colors = useColors();
 
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
       style={({ pressed }) => [
         styles.card,
         {

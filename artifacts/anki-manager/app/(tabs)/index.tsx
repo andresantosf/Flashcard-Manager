@@ -10,14 +10,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
-import { useStorage } from '@/context/StorageContext';
+import { useStorage, type Deck } from '@/context/StorageContext';
 import { useProfile } from '@/context/ProfileContext';
-import { exportAnki } from '@/lib/exportAnki';
 import { DeckCard } from '@/components/DeckCard';
 import { SpeedDial } from '@/components/SpeedDial';
 import { DeckModal } from '@/components/DeckModal';
 import { NoteModal } from '@/components/NoteModal';
 import { ProfileMenu, ProfileAvatar } from '@/components/ProfileMenu';
+import { DeckContextMenu } from '@/components/DeckContextMenu';
+import { exportAnki } from '@/lib/exportAnki';
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -27,8 +28,15 @@ export default function HomeScreen() {
   const { activeProfile } = useProfile();
 
   const [deckModalVisible, setDeckModalVisible] = useState(false);
+  const [deckToEdit, setDeckToEdit] = useState<Deck | undefined>(undefined);
+
   const [noteModalVisible, setNoteModalVisible] = useState(false);
+  const [noteModalDeckId, setNoteModalDeckId] = useState<string | undefined>(undefined);
+
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+
+  // Long-press deck context menu
+  const [contextDeck, setContextDeck] = useState<Deck | null>(null);
 
   const topPad = insets.top + (Platform.OS === 'web' ? 67 : 0);
 
@@ -38,12 +46,18 @@ export default function HomeScreen() {
     {
       label: 'Novo Baralho',
       icon: 'layers' as const,
-      onPress: () => setDeckModalVisible(true),
+      onPress: () => {
+        setDeckToEdit(undefined);
+        setDeckModalVisible(true);
+      },
     },
     {
       label: 'Nova Nota',
       icon: 'file-plus' as const,
-      onPress: () => setNoteModalVisible(true),
+      onPress: () => {
+        setNoteModalDeckId(undefined);
+        setNoteModalVisible(true);
+      },
     },
     {
       label: `Baixar para Anki (${pendingCount})`,
@@ -107,23 +121,45 @@ export default function HomeScreen() {
             deck={item}
             cardCount={getNotesByDeck(item.id).length}
             onPress={() => router.push(`/deck/${item.id}`)}
+            onLongPress={() => setContextDeck(item)}
           />
         )}
       />
 
       <SpeedDial options={speedDialOptions} />
 
+      {/* Deck create / edit modal */}
       <DeckModal
         visible={deckModalVisible}
-        onClose={() => setDeckModalVisible(false)}
+        onClose={() => { setDeckModalVisible(false); setDeckToEdit(undefined); }}
+        deckToEdit={deckToEdit}
       />
+
+      {/* Note create modal (optionally pre-selects a deck) */}
       <NoteModal
         visible={noteModalVisible}
-        onClose={() => setNoteModalVisible(false)}
+        onClose={() => { setNoteModalVisible(false); setNoteModalDeckId(undefined); }}
+        deckId={noteModalDeckId}
       />
+
       <ProfileMenu
         visible={profileMenuVisible}
         onClose={() => setProfileMenuVisible(false)}
+      />
+
+      {/* Deck long-press context menu */}
+      <DeckContextMenu
+        visible={contextDeck !== null}
+        deck={contextDeck}
+        onClose={() => setContextDeck(null)}
+        onAddNote={() => {
+          setNoteModalDeckId(contextDeck?.id);
+          setNoteModalVisible(true);
+        }}
+        onEditDeck={() => {
+          setDeckToEdit(contextDeck ?? undefined);
+          setDeckModalVisible(true);
+        }}
       />
     </View>
   );
