@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useStorage, type Note } from '@/context/StorageContext';
 import { useProfile, PROFILES } from '@/context/ProfileContext';
 import { NoteModal } from '@/components/NoteModal';
+import { ContextMenu } from '@/components/ContextMenu';
 import { ProfileMenu, ProfileAvatar } from '@/components/ProfileMenu';
 
 const PAGE_SIZE = 20;
@@ -36,15 +38,28 @@ interface FeedItemProps {
   deckName: string;
   deckColor: string;
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
-function FeedItem({ note, deckName, deckColor, onPress }: FeedItemProps) {
+function FeedItem({ note, deckName, deckColor, onPress, onLongPress }: FeedItemProps) {
   const colors = useColors();
+  const wasLongPressed = React.useRef(false);
   const [imageVisible, setImageVisible] = useState(false);
   return (
     <>
       <Pressable
-        onPress={onPress}
+        onPress={() => {
+          if (wasLongPressed.current) {
+            wasLongPressed.current = false;
+            return;
+          }
+          onPress();
+        }}
+        onLongPress={() => {
+          wasLongPressed.current = true;
+          if (onLongPress) onLongPress();
+        }}
+        delayLongPress={400}
         style={({ pressed }) => [
           styles.item,
           {
