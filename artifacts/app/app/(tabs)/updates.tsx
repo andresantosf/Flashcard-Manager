@@ -58,7 +58,7 @@ function renderBackText(text: string, color: string, baseStyle: object) {
   return (
     <Text style={[baseStyle, { color }]}> 
       <Text style={[baseStyle, { color: '#ffff7f', fontStyle: 'italic' }]}>💡 </Text>
-      <Text style={[baseStyle, { color: '#ffff7f', fontStyle: 'italic' }]}>{content}</Text>
+      <Text style={[baseStyle, { color: '#000', fontStyle: 'italic' }]}>{content}</Text>
     </Text>
   );
 }
