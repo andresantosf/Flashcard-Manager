@@ -37,3 +37,8 @@ No additional setup is needed — credentials are already committed.
 
 - Keep the existing monorepo structure (pnpm workspaces)
 - Maintain the Expo + Firebase stack
+
+## Setup notes (imported project)
+
+- On import, `artifacts/app` was a duplicate/older copy of `artifacts/anki-manager` (not wired into any workflow) and was removed. Root-level `App.tsx`, `app.json`, `android/`, `eas.json` were leftover pre-monorepo files (the app now lives fully under `artifacts/anki-manager`) and were removed too. `lib/` at the repo root is unrelated — it holds shared workspace packages (`api-client-react`, `api-spec`, `api-zod`, `db`) used by `artifacts/api-server`, and was kept.
+- Verified working: `pnpm install`, then the `artifacts/anki-manager: expo` workflow starts Metro/Expo web on port 18947 and serves the app (confirmed via screenshot — "Meus Baralhos" empty state renders).
