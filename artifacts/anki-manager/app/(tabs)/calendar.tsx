@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
-  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStorage, type Note, type Deck, NO_DECK } from '@/context/StorageContext';
 import { useColors } from '@/hooks/useColors';
@@ -22,6 +22,7 @@ const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
+const MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 const MILESTONE_KEY = 'streak_last_milestone_v1';
 const STREAK_MILESTONES = [3, 7, 15, 30, 100];
@@ -64,16 +65,12 @@ function computeStreaks(dateSet: Set<string>): {
   const activeDays = dateSet.size;
   if (activeDays === 0) return { current: 0, max: 0, activeDays: 0 };
 
-  // Current streak: walk backwards from today
   let current = 0;
   const cursor = new Date();
   cursor.setHours(0, 0, 0, 0);
-  let skipToday = false;
 
-  // If no note today, we can still be on streak (day not over) — start from yesterday
   if (!dateSet.has(toDateKey(cursor))) {
     cursor.setDate(cursor.getDate() - 1);
-    skipToday = true;
   }
 
   while (dateSet.has(toDateKey(cursor))) {
@@ -81,7 +78,6 @@ function computeStreaks(dateSet: Set<string>): {
     cursor.setDate(cursor.getDate() - 1);
   }
 
-  // Max streak: scan sorted dates
   const sorted = Array.from(dateSet).sort();
   let max = 0;
   let run = 0;
@@ -126,19 +122,6 @@ interface DayData {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function StatCard({
-  icon, label, value, color,
-}: { icon: string; label: string; value: string | number; color: string }) {
-  const c = useColors();
-  return (
-    <View style={[s.statCard, { backgroundColor: c.card, borderColor: c.border }]}>
-      <Text style={s.statIcon}>{icon}</Text>
-      <Text style={[s.statValue, { color: c.foreground }]}>{value}</Text>
-      <Text style={[s.statLabel, { color: c.mutedForeground }]}>{label}</Text>
-    </View>
-  );
-}
-
 function MilestoneToast({
   streak, onDismiss,
 }: { streak: number; onDismiss: () => void }) {
@@ -160,8 +143,13 @@ function MilestoneToast({
 // ─── Day Detail Modal ────────────────────────────────────────────────────────
 
 function DayModal({
-  data, decks, onClose,
-}: { data: DayData | null; decks: Deck[]; onClose: () => void }) {
+  data, decks, onClose, onNotePress,
+}: {
+  data: DayData | null;
+  decks: Deck[];
+  onClose: () => void;
+  onNotePress: (note: Note) => void;
+}) {
   const c = useColors();
   if (!data) return null;
 
@@ -209,9 +197,14 @@ function DayModal({
                 </Text>
               </View>
 
-              {/* Notes */}
+              {/* Notes — tappable to open for editing */}
               {notes.map((note) => (
-                <View key={note.id} style={[s.noteRow, { backgroundColor: c.background, borderColor: c.border }]}>
+                <TouchableOpacity
+                  key={note.id}
+                  activeOpacity={0.7}
+                  onPress={() => onNotePress(note)}
+                  style={[s.noteRow, { backgroundColor: c.background, borderColor: c.border }]}
+                >
                   <View style={{ flex: 1 }}>
                     <Text style={[s.noteFront, { color: c.foreground }]} numberOfLines={2}>
                       {note.front}
@@ -222,12 +215,20 @@ function DayModal({
                       </Text>
                     ) : null}
                   </View>
-                  {note.authorName ? (
-                    <View style={[s.authorBadge, { backgroundColor: note.authorColor ?? '#9CA3AF' }]}>
-                      <Text style={s.authorInitials}>{note.authorInitials ?? note.authorName[0]}</Text>
-                    </View>
-                  ) : null}
-                </View>
+                  <View style={s.noteRowRight}>
+                    {note.completed && (
+                      <View style={[s.completedBadge, { backgroundColor: '#10B98120' }]}>
+                        <Feather name="check" size={11} color="#10B981" />
+                      </View>
+                    )}
+                    {note.authorName ? (
+                      <View style={[s.authorBadge, { backgroundColor: note.authorColor ?? '#9CA3AF' }]}>
+                        <Text style={s.authorInitials}>{note.authorInitials ?? note.authorName[0]}</Text>
+                      </View>
+                    ) : null}
+                    <Feather name="chevron-right" size={14} color={c.mutedForeground} />
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
           ))}
@@ -237,54 +238,129 @@ function DayModal({
   );
 }
 
-// ─── Mini Bar Chart (30 days) ─────────────────────────────────────────────────
+// ─── Weekly Summary Chart (last 4 weeks) ─────────────────────────────────────
 
-function BarChart30Days({ notesByDate }: { notesByDate: Map<string, Note[]> }) {
+function WeeklySummaryChart({ notesByDate }: { notesByDate: Map<string, Note[]> }) {
   const c = useColors();
 
-  const bars = useMemo(() => {
+  const weeks = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const result: { key: string; count: number; label: string }[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const key = toDateKey(d);
-      result.push({ key, count: notesByDate.get(key)?.length ?? 0, label: String(d.getDate()) });
+
+    // Build 4 complete weeks ending today
+    const result: {
+      label: string;
+      dateRange: string;
+      total: number;
+      days: { key: string; count: number; label: string }[];
+    }[] = [];
+
+    for (let w = 3; w >= 0; w--) {
+      const weekEnd = new Date(today);
+      weekEnd.setDate(weekEnd.getDate() - w * 7);
+
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 6);
+
+      const days: { key: string; count: number; label: string }[] = [];
+      let total = 0;
+
+      for (let d = 0; d < 7; d++) {
+        const day = new Date(weekStart);
+        day.setDate(day.getDate() + d);
+        const key = toDateKey(day);
+        const count = notesByDate.get(key)?.length ?? 0;
+        total += count;
+        days.push({ key, count, label: WEEK_DAYS[day.getDay()] });
+      }
+
+      const startLabel = `${weekStart.getDate()} ${MONTHS_SHORT[weekStart.getMonth()]}`;
+      const endLabel = `${weekEnd.getDate()} ${MONTHS_SHORT[weekEnd.getMonth()]}`;
+      result.push({
+        label: w === 0 ? 'Esta semana' : w === 1 ? 'Sem. passada' : startLabel,
+        dateRange: `${startLabel} – ${endLabel}`,
+        total,
+        days,
+      });
     }
+
     return result;
   }, [notesByDate]);
 
-  const maxVal = Math.max(...bars.map((b) => b.count), 1);
+  const maxTotal = Math.max(...weeks.map((w) => w.total), 1);
 
   return (
-    <View style={s.chartContainer}>
-      <View style={s.chartBars}>
-        {bars.map((bar) => (
-          <View key={bar.key} style={s.barWrapper}>
-            <View style={s.barTrack}>
-              <View
-                style={[
-                  s.barFill,
-                  {
-                    height: `${Math.max((bar.count / maxVal) * 100, bar.count > 0 ? 4 : 0)}%`,
-                    backgroundColor: bar.count > 0 ? c.primary : c.border,
-                    opacity: bar.count > 0 ? 0.3 + 0.7 * (bar.count / maxVal) : 1,
-                  },
-                ]}
-              />
+    <View style={s.weeklyChart}>
+      {weeks.map((week, wi) => {
+        const barPct = week.total / maxTotal;
+        const isCurrentWeek = wi === weeks.length - 1;
+        return (
+          <View key={wi} style={s.weekRow2}>
+            {/* Week label */}
+            <View style={s.weekLabelCol}>
+              <Text style={[
+                s.weekLabel,
+                { color: isCurrentWeek ? c.primary : c.foreground },
+              ]} numberOfLines={1}>
+                {week.label}
+              </Text>
+              <Text style={[s.weekDateRange, { color: c.mutedForeground }]}>
+                {week.dateRange}
+              </Text>
+            </View>
+
+            {/* Bar + count */}
+            <View style={s.weekBarCol}>
+              <View style={[s.weekBarTrack, { backgroundColor: c.muted }]}>
+                <View
+                  style={[
+                    s.weekBarFill,
+                    {
+                      width: week.total === 0 ? 0 : `${Math.max(barPct * 100, 4)}%`,
+                      backgroundColor: isCurrentWeek ? c.primary : c.primary + 'AA',
+                    },
+                  ]}
+                />
+              </View>
+              {/* Day dots */}
+              <View style={s.weekDayDots}>
+                {week.days.map((day) => (
+                  <View
+                    key={day.key}
+                    style={[
+                      s.dayDot,
+                      {
+                        backgroundColor: day.count > 0 ? c.primary : c.border,
+                        opacity: day.count > 0
+                          ? Math.min(0.4 + (day.count / Math.max(maxTotal / 4, 1)) * 0.6, 1)
+                          : 0.5,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {/* Total count */}
+            <View style={s.weekCountCol}>
+              <Text style={[
+                s.weekCount,
+                { color: week.total > 0 ? c.foreground : c.mutedForeground },
+              ]}>
+                {week.total}
+              </Text>
+              <Text style={[s.weekCountLabel, { color: c.mutedForeground }]}>
+                {week.total === 1 ? 'cartão' : 'cartões'}
+              </Text>
             </View>
           </View>
-        ))}
-      </View>
-      <View style={s.chartLabels}>
-        {bars.map((bar, i) => (
-          <Text
-            key={bar.key}
-            style={[s.chartLabel, { color: c.mutedForeground }]}
-          >
-            {i % 5 === 0 ? bar.label : ''}
-          </Text>
+        );
+      })}
+
+      {/* Day legend */}
+      <View style={s.dayLegend}>
+        {WEEK_DAYS.map((d) => (
+          <Text key={d} style={[s.dayLegendLabel, { color: c.mutedForeground }]}>{d[0]}</Text>
         ))}
       </View>
     </View>
@@ -296,6 +372,7 @@ function BarChart30Days({ notesByDate }: { notesByDate: Map<string, Note[]> }) {
 export default function CalendarScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { notes, decks } = useStorage();
 
   const today = new Date();
@@ -323,12 +400,16 @@ export default function CalendarScreen() {
     [dateSet],
   );
 
+  const completedCards = useMemo(
+    () => notes.filter((n) => n.completed).length,
+    [notes],
+  );
+
   // ── Milestone detection ──────────────────────────────────────────────────
   useEffect(() => {
     if (currentStreak === 0) return;
     AsyncStorage.getItem(MILESTONE_KEY).then((raw) => {
       const last = raw ? parseInt(raw, 10) : 0;
-      // Find highest milestone reached that hasn't been shown yet
       const reached = STREAK_MILESTONES.filter((m) => m <= currentStreak && m > last);
       if (reached.length > 0) {
         const highest = Math.max(...reached);
@@ -343,13 +424,11 @@ export default function CalendarScreen() {
     if (notes.length === 0) return null;
 
     const totalCards = notes.length;
-    const totalDecks = decks.length;
     const avgPerDay = activeDays > 0 ? (totalCards / activeDays).toFixed(1) : '0';
 
-    // Most productive month
     const byMonth = new Map<string, number>();
     for (const [key, arr] of notesByDate) {
-      const monthKey = key.slice(0, 7); // YYYY-MM
+      const monthKey = key.slice(0, 7);
       byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + arr.length);
     }
     let bestMonthKey = '';
@@ -364,7 +443,6 @@ export default function CalendarScreen() {
         })()
       : '-';
 
-    // Day with most cards
     let bestDayKey = '';
     let bestDayCount = 0;
     for (const [k, arr] of notesByDate) {
@@ -374,15 +452,14 @@ export default function CalendarScreen() {
       ? parseLocalDate(bestDayKey).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
       : '-';
 
-    // Cards per author
     const byAuthor = new Map<string, number>();
     for (const note of notes) {
       const name = note.authorName ?? 'Sem perfil';
       byAuthor.set(name, (byAuthor.get(name) ?? 0) + 1);
     }
 
-    return { totalCards, totalDecks, avgPerDay, bestMonth, bestDay, byAuthor };
-  }, [notes, decks, notesByDate, activeDays]);
+    return { totalCards, avgPerDay, bestMonth, bestDay, byAuthor };
+  }, [notes, notesByDate, activeDays]);
 
   // ── Calendar grid ────────────────────────────────────────────────────────
   const calendarDays = useMemo(() => {
@@ -392,7 +469,6 @@ export default function CalendarScreen() {
       ...Array(firstDay).fill(null),
       ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
     ];
-    // Pad to complete last row
     while (cells.length % 7 !== 0) cells.push(null);
     return cells;
   }, [viewYear, viewMonth]);
@@ -420,14 +496,27 @@ export default function CalendarScreen() {
     setSelectedDay({ dateKey: key, notes: dayNotes });
   }, [viewYear, viewMonth, notesByDate]);
 
+  const handleNotePress = useCallback((note: Note) => {
+    setSelectedDay(null);
+    // Navigate to the deck page with the note pre-selected for editing
+    router.push({ pathname: '/deck/[id]', params: { id: note.deckId, openNote: note.id } });
+  }, [router]);
+
   const isToday = (day: number) =>
     day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
 
   const isAtFutureLimit = viewYear === today.getFullYear() && viewMonth === today.getMonth();
 
+  const miniStats = [
+    { icon: '🏆', value: maxStreak, label: 'Recorde' },
+    { icon: '📅', value: activeDays, label: 'Dias ativos' },
+    { icon: '📝', value: notes.length, label: 'Cartões' },
+    { icon: '✅', value: completedCards, label: 'Concluídos' },
+    { icon: '📚', value: decks.length, label: 'Baralhos' },
+  ];
+
   return (
     <View style={[s.root, { backgroundColor: c.background }]}>
-      {/* Milestone Toast */}
       {milestone !== null && (
         <MilestoneToast streak={milestone} onDismiss={() => setMilestone(null)} />
       )}
@@ -451,26 +540,13 @@ export default function CalendarScreen() {
             </Text>
           </View>
           <View style={s.miniStats}>
-            <View style={[s.miniStat, { backgroundColor: c.card, borderColor: c.border }]}>
-              <Text style={s.miniStatIcon}>🏆</Text>
-              <Text style={[s.miniStatVal, { color: c.foreground }]}>{maxStreak}</Text>
-              <Text style={[s.miniStatLabel, { color: c.mutedForeground }]}>Recorde</Text>
-            </View>
-            <View style={[s.miniStat, { backgroundColor: c.card, borderColor: c.border }]}>
-              <Text style={s.miniStatIcon}>📅</Text>
-              <Text style={[s.miniStatVal, { color: c.foreground }]}>{activeDays}</Text>
-              <Text style={[s.miniStatLabel, { color: c.mutedForeground }]}>Dias ativos</Text>
-            </View>
-            <View style={[s.miniStat, { backgroundColor: c.card, borderColor: c.border }]}>
-              <Text style={s.miniStatIcon}>📝</Text>
-              <Text style={[s.miniStatVal, { color: c.foreground }]}>{notes.length}</Text>
-              <Text style={[s.miniStatLabel, { color: c.mutedForeground }]}>Cartões</Text>
-            </View>
-            <View style={[s.miniStat, { backgroundColor: c.card, borderColor: c.border }]}>
-              <Text style={s.miniStatIcon}>📚</Text>
-              <Text style={[s.miniStatVal, { color: c.foreground }]}>{decks.length}</Text>
-              <Text style={[s.miniStatLabel, { color: c.mutedForeground }]}>Baralhos</Text>
-            </View>
+            {miniStats.map((stat) => (
+              <View key={stat.label} style={[s.miniStat, { backgroundColor: c.card, borderColor: c.border }]}>
+                <Text style={s.miniStatIcon}>{stat.icon}</Text>
+                <Text style={[s.miniStatVal, { color: c.foreground }]}>{stat.value}</Text>
+                <Text style={[s.miniStatLabel, { color: c.mutedForeground }]}>{stat.label}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -558,10 +634,13 @@ export default function CalendarScreen() {
           </View>
         </View>
 
-        {/* 30-day chart */}
+        {/* Weekly summary chart */}
         <View style={[s.sectionCard, { backgroundColor: c.card, borderColor: c.border }]}>
-          <Text style={[s.sectionTitle, { color: c.foreground }]}>Últimos 30 dias</Text>
-          <BarChart30Days notesByDate={notesByDate} />
+          <Text style={[s.sectionTitle, { color: c.foreground }]}>Últimas 4 semanas</Text>
+          <Text style={[s.sectionSubtitle, { color: c.mutedForeground }]}>
+            Cartões criados por semana
+          </Text>
+          <WeeklySummaryChart notesByDate={notesByDate} />
         </View>
 
         {/* Extra stats */}
@@ -584,7 +663,6 @@ export default function CalendarScreen() {
               </View>
             </View>
 
-            {/* Cards per author */}
             {stats.byAuthor.size > 0 && (
               <View style={{ marginTop: 12 }}>
                 <Text style={[s.authorTitle, { color: c.mutedForeground }]}>Cartões por perfil</Text>
@@ -612,9 +690,13 @@ export default function CalendarScreen() {
         )}
       </ScrollView>
 
-      {/* Day Detail Modal */}
       {selectedDay && (
-        <DayModal data={selectedDay} decks={decks} onClose={() => setSelectedDay(null)} />
+        <DayModal
+          data={selectedDay}
+          decks={decks}
+          onClose={() => setSelectedDay(null)}
+          onNotePress={handleNotePress}
+        />
       )}
     </View>
   );
@@ -654,19 +736,18 @@ const s = StyleSheet.create({
   streakFire: { fontSize: 28 },
   streakNumber: { fontSize: 26, fontFamily: 'Inter_700Bold', lineHeight: 30 },
   streakLabel: { fontSize: 11, fontFamily: 'Inter_500Medium', textAlign: 'center' },
-  miniStats: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  miniStats: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   miniStat: {
-    flex: 1,
-    minWidth: '45%',
+    width: '31%',
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 9,
     gap: 1,
   },
-  miniStatIcon: { fontSize: 16 },
-  miniStatVal: { fontSize: 17, fontFamily: 'Inter_700Bold' },
-  miniStatLabel: { fontSize: 10, fontFamily: 'Inter_500Medium', textAlign: 'center' },
+  miniStatIcon: { fontSize: 14 },
+  miniStatVal: { fontSize: 15, fontFamily: 'Inter_700Bold' },
+  miniStatLabel: { fontSize: 9, fontFamily: 'Inter_500Medium', textAlign: 'center' },
 
   // ── Calendar card ────────────────────────────────────────────────────────
   calendarCard: {
@@ -716,16 +797,44 @@ const s = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
   },
-  sectionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', marginBottom: 12 },
+  sectionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', marginBottom: 2 },
+  sectionSubtitle: { fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 14 },
 
-  // ── Bar chart ─────────────────────────────────────────────────────────────
-  chartContainer: { gap: 4 },
-  chartBars: { flexDirection: 'row', height: 72, alignItems: 'flex-end', gap: 2 },
-  barWrapper: { flex: 1, height: '100%', justifyContent: 'flex-end' },
-  barTrack: { width: '100%', height: '100%', justifyContent: 'flex-end' },
-  barFill: { width: '100%', borderRadius: 2, minHeight: 2 },
-  chartLabels: { flexDirection: 'row', gap: 2 },
-  chartLabel: {
+  // ── Weekly summary chart ──────────────────────────────────────────────────
+  weeklyChart: { gap: 14 },
+  weekRow2: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  weekLabelCol: { width: 88 },
+  weekLabel: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  weekDateRange: { fontSize: 10, fontFamily: 'Inter_400Regular', marginTop: 1 },
+  weekBarCol: { flex: 1, gap: 5 },
+  weekBarTrack: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  weekBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  weekDayDots: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  dayDot: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+  },
+  weekCountCol: { width: 44, alignItems: 'flex-end' },
+  weekCount: { fontSize: 14, fontFamily: 'Inter_700Bold' },
+  weekCountLabel: { fontSize: 9, fontFamily: 'Inter_400Regular' },
+  dayLegend: {
+    flexDirection: 'row',
+    paddingLeft: 98,
+    gap: 3,
+    marginTop: -8,
+  },
+  dayLegendLabel: {
     flex: 1,
     textAlign: 'center',
     fontSize: 9,
@@ -743,19 +852,6 @@ const s = StyleSheet.create({
   authorBar: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
   authorBarFill: { height: '100%', borderRadius: 4 },
   authorCount: { fontSize: 12, fontFamily: 'Inter_400Regular', width: 30, textAlign: 'right' },
-
-  // ── Stat card (unused but kept) ───────────────────────────────────────────
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 2,
-  },
-  statIcon: { fontSize: 20 },
-  statValue: { fontSize: 20, fontFamily: 'Inter_700Bold' },
-  statLabel: { fontSize: 10, fontFamily: 'Inter_500Medium', textAlign: 'center' },
 
   // ── Day modal ─────────────────────────────────────────────────────────────
   overlay: {
@@ -807,16 +903,28 @@ const s = StyleSheet.create({
     padding: 10,
     marginBottom: 6,
   },
-  noteFront: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  noteBack: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
-  authorBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  noteRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  completedBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  authorInitials: { fontSize: 11, fontFamily: 'Inter_700Bold', color: '#fff' },
+  noteFront: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  noteBack: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  authorBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authorInitials: { fontSize: 10, fontFamily: 'Inter_700Bold', color: '#fff' },
 
   // ── Milestone toast ───────────────────────────────────────────────────────
   toastContainer: {

@@ -22,7 +22,7 @@ import { ProfileMenu, ProfileAvatar } from '@/components/ProfileMenu';
 import { useProfile } from '@/context/ProfileContext';
 
 export default function DeckScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, openNote } = useLocalSearchParams<{ id: string; openNote?: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -47,6 +47,18 @@ export default function DeckScreen() {
   const [contextNote, setContextNote] = useState<Note | null>(null);
   const [editNoteVisible, setEditNoteVisible] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+
+  // Auto-open a specific note for editing when navigated from the calendar
+  const openNoteHandled = React.useRef(false);
+  React.useEffect(() => {
+    if (!openNote || openNoteHandled.current || notes.length === 0) return;
+    const target = notes.find((n) => n.id === openNote);
+    if (target) {
+      openNoteHandled.current = true;
+      setContextNote(target);
+      setEditNoteVisible(true);
+    }
+  }, [openNote, notes]);
 
   const bottomPad = (insets.bottom || 0) + (Platform.OS === 'web' ? 34 : 0);
 
