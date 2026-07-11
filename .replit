@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-20", "bash"]
 
 [deployment]
 router = "application"
@@ -28,3 +28,6 @@ EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN = "flashcards-73c94.firebaseapp.com"
 EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "786866735077"
 EXPO_PUBLIC_FIREBASE_PROJECT_ID = "flashcards-73c94"
 EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET = "flashcards-73c94.firebasestorage.app"
+
+[nix]
+channel = "stable-25_05"
