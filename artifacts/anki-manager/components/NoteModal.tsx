@@ -50,6 +50,14 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
   // Always show deck picker — NO_DECK is always available even with no real decks
   const showDeckPicker = true;
 
+  const handleAddTip = () => {
+    setBack((prev) => {
+      const trimmed = prev.trim();
+      if (trimmed.startsWith('💡')) return prev;
+      return trimmed ? `💡 ${trimmed}` : '💡 ';
+    });
+  };
+
   useEffect(() => {
     if (visible) {
       setFront(noteToEdit?.front ?? '');
@@ -258,9 +266,22 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
               textAlignVertical="top"
             />
 
-            <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
-              VERSO
-            </Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>VERSO</Text>
+              <Pressable
+                onPress={handleAddTip}
+                style={({ pressed }) => [
+                  styles.tipButton,
+                  {
+                    backgroundColor: colors.secondary,
+                    opacity: pressed ? 0.8 : 1,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.tipButtonText, { color: colors.foreground }]}>dica</Text>
+              </Pressable>
+            </View>
             <TextInput
               ref={backInputRef}
               style={[
@@ -390,12 +411,27 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     marginBottom: 20,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    marginTop: 4,
+  },
   sectionLabel: {
     fontSize: 11,
     fontFamily: 'Inter_600SemiBold',
     letterSpacing: 0.8,
-    marginBottom: 10,
-    marginTop: 4,
+  },
+  tipButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  tipButtonText: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
   },
   deckPicker: { marginBottom: 20 },
   deckChip: {

@@ -28,6 +28,28 @@ function formatDate(iso: string) {
   });
 }
 
+function renderBackText(text: string, color: string, baseStyle: object) {
+  const normalized = text.trim();
+  const hasTip = normalized.startsWith('💡');
+
+  if (!hasTip) {
+    return (
+      <Text style={[baseStyle, { color }]} numberOfLines={2}>
+        {text}
+      </Text>
+    );
+  }
+
+  const content = normalized.replace(/^💡\s*/, '');
+
+  return (
+    <Text style={[baseStyle, { color }]} numberOfLines={2}>
+      <Text style={[baseStyle, { color: '#ffff7f', fontStyle: 'italic' }]}>💡 </Text>
+      <Text style={[baseStyle, { color: '#ffff7f', fontStyle: 'italic' }]}>{content}</Text>
+    </Text>
+  );
+}
+
 export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
   const colors = useColors();
   const wasLongPressed = useRef(false);
@@ -97,12 +119,7 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       {/* Back */}
-      <Text
-        style={[styles.back, { color: colors.mutedForeground }]}
-        numberOfLines={2}
-      >
-        {note.back}
-      </Text>
+      {renderBackText(note.back, colors.mutedForeground, styles.back)}
 
       {note.imageUrl ? (
         <Pressable onPress={() => setImageVisible(true)} style={styles.imageWrapper}>
