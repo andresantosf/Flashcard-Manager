@@ -16,20 +16,15 @@ function escapeField(value: string): string {
 }
 
 function formatBackForExport(value: string): string {
-  const normalized = value.trim();
-  if (!normalized.startsWith('💡')) {
-    return value;
-  }
+  return value.replace(/^💡\s*(.*)$/gm, (_, content) => {
+    const safeContent = content
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
 
-  const content = normalized.replace(/^💡\s*/, '');
-  const safeContent = content
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  return `<font color="#ffff7f"><i>💡 ${safeContent}</i></font>`;
+    return `<font color="#ffff7f"><i>💡 ${safeContent}</i></font>`;
+  });
 }
-
 /**
  * Builds the Anki-compatible TSV string from the given (already-filtered) notes.
  *
