@@ -4,8 +4,8 @@ buildscript {
     ext {
         buildToolsVersion = "35.0.0"  // Atualizado para remover o warning
         minSdkVersion = 24            // Mantenha o seu atual ou aumente se necessário
-        compileSdkVersion = 36         // Altere de 34 para 36
-        targetSdkVersion = 36          // Altere de 34 para 36
+        compileSdkVersion = 36
+        targetSdkVersion = 36
     }
   repositories {
     google()
