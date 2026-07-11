@@ -41,6 +41,28 @@ interface FeedItemProps {
   onLongPress?: () => void;
 }
 
+function renderBackText(text: string, color: string, baseStyle: object) {
+  const normalized = text.trim();
+  const hasTip = normalized.startsWith('💡');
+
+  if (!hasTip) {
+    return (
+      <Text style={[baseStyle, { color }]}>
+        {text}
+      </Text>
+    );
+  }
+
+  const content = normalized.replace(/^💡\s*/, '');
+
+  return (
+    <Text style={[baseStyle, { color }]}> 
+      <Text style={[baseStyle, { color: '#ffff7f', fontStyle: 'italic' }]}>💡 </Text>
+      <Text style={[baseStyle, { color: '#ffff7f', fontStyle: 'italic' }]}>{content}</Text>
+    </Text>
+  );
+}
+
 function FeedItem({ note, deckName, deckColor, onPress, onLongPress }: FeedItemProps) {
   const colors = useColors();
   const wasLongPressed = React.useRef(false);
@@ -127,9 +149,7 @@ function FeedItem({ note, deckName, deckColor, onPress, onLongPress }: FeedItemP
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
         {/* Back */}
-        <Text style={[styles.back, { color: colors.mutedForeground }]}> 
-          {note.back}
-        </Text>
+        {renderBackText(note.back, colors.mutedForeground, styles.back)}
 
         {note.imageUrl ? (
           <Pressable onPress={() => setImageVisible(true)} style={styles.feedImageWrapper}>
