@@ -16,6 +16,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StorageProvider } from '@/context/StorageContext';
 import { ProfileProvider } from '@/context/ProfileContext';
 import colors from '@/constants/colors';
+import { setupNotifications } from '@/lib/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -63,6 +64,10 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    setupNotifications().catch(() => {});
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 

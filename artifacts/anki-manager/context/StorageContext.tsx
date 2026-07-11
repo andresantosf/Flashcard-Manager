@@ -21,6 +21,31 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import uploadImage from '@/lib/imgbb';
+import {
+  sendNewCardNotification,
+  scheduleDailyReminder,
+  cancelDailyReminder,
+} from '@/lib/notifications';
+
+// ── Notification helpers ──────────────────────────────────────────────────────
+
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function currentStreakFromNotes(notes: { createdAt: string }[]): number {
+  const dateSet = new Set(notes.map((n) => n.createdAt.slice(0, 10)));
+  if (dateSet.size === 0) return 0;
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  const key = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (!dateSet.has(key(cursor))) cursor.setDate(cursor.getDate() - 1);
+  while (dateSet.has(key(cursor))) { streak++; cursor.setDate(cursor.getDate() - 1); }
+  return streak;
+}
 
 export interface Deck {
   id: string;
@@ -106,8 +131,16 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const q = query(collection(db, NOTES), orderBy('createdAt', 'asc'));
     return onSnapshot(q, (snap) => {
-      setNotes(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Note)));
+      const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Note));
+      setNotes(loaded);
       setNotesLoaded(true);
+      // Schedule or cancel tonight's reminder based on today's activity
+      const addedToday = loaded.some((n) => n.createdAt.startsWith(todayKey()));
+      if (addedToday) {
+        cancelDailyReminder();
+      } else {
+        scheduleDailyReminder(currentStreakFromNotes(loaded));
+      }
     });
   }, []);
 
@@ -163,6 +196,10 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
       }
 
       await setDoc(noteRef, noteData);
+
+      // Fire "X adicionou um novo cartão" notification + cancel tonight's reminder
+      sendNewCardNotification(author.name).catch(() => {});
+      cancelDailyReminder().catch(() => {});
     },
     [],
   );

@@ -16,6 +16,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StorageProvider } from '@/context/StorageContext';
 import { ProfileProvider } from '@/context/ProfileContext';
 import colors from '@/constants/colors';
+import { setupNotifications } from '@/lib/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -57,6 +58,11 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  // Request notification permissions on first launch
+  useEffect(() => {
+    setupNotifications().catch(() => {});
+  }, []);
 
   // Fallback: render after 3 s even if fonts haven't resolved yet
   const [timedOut, setTimedOut] = useState(false);
