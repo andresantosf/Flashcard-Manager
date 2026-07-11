@@ -279,7 +279,7 @@ export function NoteModal({ visible, onClose, deckId, noteToEdit }: NoteModalPro
                   },
                 ]}
               >
-                <Text style={[styles.tipButtonText, { color: colors.foreground }]}>dica</Text>
+                <Text style={[styles.tipButtonText, { color: colors.foreground }]}>💡</Text>
               </Pressable>
             </View>
             <TextInput
