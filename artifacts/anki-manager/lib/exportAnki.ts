@@ -15,6 +15,21 @@ function escapeField(value: string): string {
   return value;
 }
 
+function formatBackForExport(value: string): string {
+  const normalized = value.trim();
+  if (!normalized.startsWith('💡')) {
+    return value;
+  }
+
+  const content = normalized.replace(/^💡\s*/, '');
+  const safeContent = content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  return `<font color="#ffff7f"><i>💡 ${safeContent}</i></font>`;
+}
+
 /**
  * Builds the Anki-compatible TSV string from the given (already-filtered) notes.
  *
@@ -44,7 +59,7 @@ export function buildAnkiTsv(notes: Note[], decks: Deck[]): string {
       escapeField('Basic (and reversed card)'),
       escapeField(deckName),
       escapeField(note.front),
-      escapeField(note.back),
+      escapeField(formatBackForExport(note.back)),
       '', // tags column — empty
     ].join('\t');
   });
