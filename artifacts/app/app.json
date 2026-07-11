@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "App",
-    "slug": "app",
+    "name": "Anki Card Manager",
+    "slug": "anki-manager",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "app",
+    "scheme": "anki-manager",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -16,7 +16,9 @@
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "package": "com.andre_sants.ankimanager"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -33,6 +35,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "firebaseApiKey": "AIzaSyAxm-fbDPfb99zI0ApqdSBmHOTYtwuDp8Q",
+      "firebaseAuthDomain": "flashcards-73c94.firebaseapp.com",
+      "firebaseProjectId": "flashcards-73c94",
+      "firebaseStorageBucket": "flashcards-73c94.firebasestorage.app",
+      "firebaseMessagingSenderId": "786866735077",
+      "firebaseAppId": "1:786866735077:android:e2d816db35c1c4c6b7110c",
+      "eas": {
+        "projectId": "b547ced4-fa3d-49c4-9bb9-b8b143e78034"
+      }
     }
   }
 }

@@ -13,16 +13,39 @@ import {
 } from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StorageProvider } from '@/context/StorageContext';
+import { ProfileProvider } from '@/context/ProfileContext';
+import colors from '@/constants/colors';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerBackTitle: 'Back' }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.light.background },
+        animation: 'slide_from_right',
+      }}
+    >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="deck/[id]"
+        options={{
+          headerShown: true,
+          headerBackTitle: '',
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: colors.light.background },
+          headerTintColor: colors.light.foreground,
+          headerTitleStyle: {
+            fontFamily: 'Inter_600SemiBold',
+            fontSize: 17,
+          },
+          animation: 'slide_from_right',
+        }}
+      />
     </Stack>
   );
 }
@@ -47,9 +70,13 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView>
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <RootLayoutNav />
+              <ProfileProvider>
+                <StorageProvider>
+                  <RootLayoutNav />
+                </StorageProvider>
+              </ProfileProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>

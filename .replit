@@ -11,6 +11,15 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "artifacts/anki-manager: expo"
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=18947 pnpm --filter @workspace/anki-manager run dev"
+waitForPort = 18947
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
