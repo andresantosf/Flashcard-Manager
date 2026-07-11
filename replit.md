@@ -1,46 +1,39 @@
-# Workspace
+# Anki Card Manager
 
-A pnpm monorepo with an Expo/React Native mobile app, shared library packages, and Firebase integration.
-
-## Run & Operate
-
-- **Mobile app**: `artifacts/app: expo` workflow (Expo dev server via Metro)
-  - Scan the QR code from the URL bar → Expo Go to test on a physical device
-  - Web preview available at the root path `/`
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (requires `DATABASE_URL`)
+A React Native / Expo mobile app for managing Anki-style flashcard decks, backed by Firebase Firestore.
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- **Mobile app**: Expo (React Native) — `artifacts/anki-manager/`
+- **API server**: Express + Drizzle ORM — `artifacts/api-server/`
+- **Storage**: Firebase Firestore (credentials baked into `google-services.json` and `app.json`)
 
-## Where things live
+## Running locally on Replit
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+Dependencies are managed with **pnpm** (monorepo via `pnpm-workspace.yaml`).
 
-## Architecture decisions
+Install all dependencies from the repo root:
+```bash
+pnpm install
+```
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+Start the Expo dev server (via the configured workflow):
+```
+artifacts/anki-manager: expo
+```
 
-## Product
+The app runs as a web preview via Expo's web renderer. Scan the QR code shown in logs with **Expo Go** on a physical device for native mobile preview.
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+## Firebase
+
+Firebase config is read from (in order of priority):
+1. `EXPO_PUBLIC_FIREBASE_*` environment variables
+2. `expo.extra.*` in `artifacts/anki-manager/app.json`
+3. `artifacts/anki-manager/google-services.json`
+
+No additional setup is needed — credentials are already committed.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Keep the existing monorepo structure (pnpm workspaces)
+- Maintain the Expo + Firebase stack
