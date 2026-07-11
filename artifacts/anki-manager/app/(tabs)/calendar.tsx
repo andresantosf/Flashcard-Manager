@@ -238,130 +238,136 @@ function DayModal({
   );
 }
 
-// ─── Weekly Summary Chart (last 4 weeks) ─────────────────────────────────────
+// ─── GitHub-style Heatmap (last 10 weeks) ────────────────────────────────────
 
-function WeeklySummaryChart({ notesByDate }: { notesByDate: Map<string, Note[]> }) {
+const NUM_WEEKS = 10;
+const CELL = 24;   // px — cell width & height
+const CGAP = 3;    // px — gap between cells
+const DAY_LABEL_W = 24; // px — width of day-name column
+
+// Map a count → one of 5 intensity levels (0–4)
+function intensityLevel(count: number, max: number): number {
+  if (count === 0 || max === 0) return 0;
+  const r = count / max;
+  if (r <= 0.15) return 1;
+  if (r <= 0.40) return 2;
+  if (r <= 0.70) return 3;
+  return 4;
+}
+
+function GitHubHeatmap({ notesByDate }: { notesByDate: Map<string, Note[]> }) {
   const c = useColors();
 
-  const weeks = useMemo(() => {
+  // ── Build grid: columns = weeks (oldest→newest), rows = weekdays (Sun=0) ──
+  const { columns, monthLabels, maxCount } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Build 4 complete weeks ending today
-    const result: {
-      label: string;
-      dateRange: string;
-      total: number;
-      days: { key: string; count: number; label: string }[];
-    }[] = [];
+    // Start of current week (Sunday)
+    const currentSunday = new Date(today);
+    currentSunday.setDate(today.getDate() - today.getDay());
 
-    for (let w = 3; w >= 0; w--) {
-      const weekEnd = new Date(today);
-      weekEnd.setDate(weekEnd.getDate() - w * 7);
+    // Grid starts NUM_WEEKS-1 weeks before
+    const gridStart = new Date(currentSunday);
+    gridStart.setDate(currentSunday.getDate() - (NUM_WEEKS - 1) * 7);
 
-      const weekStart = new Date(weekEnd);
-      weekStart.setDate(weekStart.getDate() - 6);
+    let maxCount = 0;
+    const columns: { key: string; count: number; isFuture: boolean }[][] = [];
+    const monthLabels: { col: number; label: string }[] = [];
+    let lastMonth = -1;
 
-      const days: { key: string; count: number; label: string }[] = [];
-      let total = 0;
-
+    for (let w = 0; w < NUM_WEEKS; w++) {
+      const col: { key: string; count: number; isFuture: boolean }[] = [];
       for (let d = 0; d < 7; d++) {
-        const day = new Date(weekStart);
-        day.setDate(day.getDate() + d);
-        const key = toDateKey(day);
-        const count = notesByDate.get(key)?.length ?? 0;
-        total += count;
-        days.push({ key, count, label: WEEK_DAYS[day.getDay()] });
-      }
+        const date = new Date(gridStart);
+        date.setDate(gridStart.getDate() + w * 7 + d);
+        const isFuture = date > today;
+        const key = toDateKey(date);
+        const count = isFuture ? 0 : (notesByDate.get(key)?.length ?? 0);
+        if (!isFuture) maxCount = Math.max(maxCount, count);
+        col.push({ key, count, isFuture });
 
-      const startLabel = `${weekStart.getDate()} ${MONTHS_SHORT[weekStart.getMonth()]}`;
-      const endLabel = `${weekEnd.getDate()} ${MONTHS_SHORT[weekEnd.getMonth()]}`;
-      result.push({
-        label: w === 0 ? 'Esta semana' : w === 1 ? 'Sem. passada' : startLabel,
-        dateRange: `${startLabel} – ${endLabel}`,
-        total,
-        days,
-      });
+        if (d === 0 && date.getMonth() !== lastMonth) {
+          lastMonth = date.getMonth();
+          monthLabels.push({ col: w, label: MONTHS_SHORT[date.getMonth()] });
+        }
+      }
+      columns.push(col);
     }
 
-    return result;
+    return { columns, monthLabels, maxCount };
   }, [notesByDate]);
 
-  const maxTotal = Math.max(...weeks.map((w) => w.total), 1);
+  const cellBg = (level: number) => {
+    switch (level) {
+      case 1: return c.primary + '33';
+      case 2: return c.primary + '66';
+      case 3: return c.primary + 'AA';
+      case 4: return c.primary;
+      default: return c.muted;
+    }
+  };
+
+  // Only label alternating rows so it stays legible
+  const DAY_LABELS = ['Dom', '', 'Ter', '', 'Qui', '', 'Sáb'];
+
+  const colStep = CELL + CGAP;
+  const totalW = DAY_LABEL_W + CGAP + NUM_WEEKS * colStep - CGAP;
 
   return (
-    <View style={s.weeklyChart}>
-      {weeks.map((week, wi) => {
-        const barPct = week.total / maxTotal;
-        const isCurrentWeek = wi === weeks.length - 1;
-        return (
-          <View key={wi} style={s.weekRow2}>
-            {/* Week label */}
-            <View style={s.weekLabelCol}>
-              <Text style={[
-                s.weekLabel,
-                { color: isCurrentWeek ? c.primary : c.foreground },
-              ]} numberOfLines={1}>
-                {week.label}
-              </Text>
-              <Text style={[s.weekDateRange, { color: c.mutedForeground }]}>
-                {week.dateRange}
-              </Text>
+    <View>
+      {/* Month labels */}
+      <View style={{ flexDirection: 'row', width: totalW, marginBottom: 4 }}>
+        <View style={{ width: DAY_LABEL_W + CGAP }} />
+        {columns.map((_, wi) => {
+          const ml = monthLabels.find((m) => m.col === wi);
+          return (
+            <View key={wi} style={{ width: CELL, marginRight: wi < NUM_WEEKS - 1 ? CGAP : 0 }}>
+              {ml ? (
+                <Text style={[s.hmMonthLabel, { color: c.mutedForeground }]}>{ml.label}</Text>
+              ) : null}
             </View>
+          );
+        })}
+      </View>
 
-            {/* Bar + count */}
-            <View style={s.weekBarCol}>
-              <View style={[s.weekBarTrack, { backgroundColor: c.muted }]}>
-                <View
-                  style={[
-                    s.weekBarFill,
-                    {
-                      width: week.total === 0 ? 0 : `${Math.max(barPct * 100, 4)}%`,
-                      backgroundColor: isCurrentWeek ? c.primary : c.primary + 'AA',
-                    },
-                  ]}
-                />
-              </View>
-              {/* Day dots */}
-              <View style={s.weekDayDots}>
-                {week.days.map((day) => (
-                  <View
-                    key={day.key}
-                    style={[
-                      s.dayDot,
-                      {
-                        backgroundColor: day.count > 0 ? c.primary : c.border,
-                        opacity: day.count > 0
-                          ? Math.min(0.4 + (day.count / Math.max(maxTotal / 4, 1)) * 0.6, 1)
-                          : 0.5,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
-            </View>
-
-            {/* Total count */}
-            <View style={s.weekCountCol}>
-              <Text style={[
-                s.weekCount,
-                { color: week.total > 0 ? c.foreground : c.mutedForeground },
-              ]}>
-                {week.total}
-              </Text>
-              <Text style={[s.weekCountLabel, { color: c.mutedForeground }]}>
-                {week.total === 1 ? 'cartão' : 'cartões'}
-              </Text>
-            </View>
+      {/* Grid rows */}
+      {DAY_LABELS.map((label, di) => (
+        <View key={di} style={{ flexDirection: 'row', width: totalW, marginBottom: CGAP }}>
+          {/* Day label */}
+          <View style={{ width: DAY_LABEL_W, marginRight: CGAP, justifyContent: 'center' }}>
+            <Text style={[s.hmDayLabel, { color: c.mutedForeground }]}>{label}</Text>
           </View>
-        );
-      })}
 
-      {/* Day legend */}
-      <View style={s.dayLegend}>
-        {WEEK_DAYS.map((d) => (
-          <Text key={d} style={[s.dayLegendLabel, { color: c.mutedForeground }]}>{d[0]}</Text>
+          {/* Cells for this day across all weeks */}
+          {columns.map((col, wi) => {
+            const cell = col[di];
+            const level = cell.isFuture ? -1 : intensityLevel(cell.count, maxCount);
+            return (
+              <View
+                key={wi}
+                style={[
+                  {
+                    width: CELL,
+                    height: CELL,
+                    borderRadius: 3,
+                    marginRight: wi < NUM_WEEKS - 1 ? CGAP : 0,
+                    backgroundColor: level < 0 ? 'transparent' : cellBg(level),
+                  },
+                ]}
+              />
+            );
+          })}
+        </View>
+      ))}
+
+      {/* Legend */}
+      <View style={s.hmLegend}>
+        <Text style={[s.hmLegendLabel, { color: c.mutedForeground }]}>Menos</Text>
+        {[0, 1, 2, 3, 4].map((level) => (
+          <View key={level} style={[s.hmLegendCell, { backgroundColor: cellBg(level) }]} />
         ))}
+        <Text style={[s.hmLegendLabel, { color: c.mutedForeground }]}>Mais</Text>
       </View>
     </View>
   );
@@ -634,13 +640,13 @@ export default function CalendarScreen() {
           </View>
         </View>
 
-        {/* Weekly summary chart */}
+        {/* GitHub heatmap */}
         <View style={[s.sectionCard, { backgroundColor: c.card, borderColor: c.border }]}>
-          <Text style={[s.sectionTitle, { color: c.foreground }]}>Últimas 4 semanas</Text>
+          <Text style={[s.sectionTitle, { color: c.foreground }]}>Últimas 10 semanas</Text>
           <Text style={[s.sectionSubtitle, { color: c.mutedForeground }]}>
-            Cartões criados por semana
+            Cartões criados por dia
           </Text>
-          <WeeklySummaryChart notesByDate={notesByDate} />
+          <GitHubHeatmap notesByDate={notesByDate} />
         </View>
 
         {/* Extra stats */}
@@ -800,45 +806,30 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', marginBottom: 2 },
   sectionSubtitle: { fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 14 },
 
-  // ── Weekly summary chart ──────────────────────────────────────────────────
-  weeklyChart: { gap: 14 },
-  weekRow2: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  weekLabelCol: { width: 88 },
-  weekLabel: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  weekDateRange: { fontSize: 10, fontFamily: 'Inter_400Regular', marginTop: 1 },
-  weekBarCol: { flex: 1, gap: 5 },
-  weekBarTrack: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
+  // ── GitHub heatmap ────────────────────────────────────────────────────────
+  hmMonthLabel: {
+    fontSize: 9,
+    fontFamily: 'Inter_500Medium',
   },
-  weekBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  weekDayDots: {
-    flexDirection: 'row',
-    gap: 3,
-  },
-  dayDot: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-  },
-  weekCountCol: { width: 44, alignItems: 'flex-end' },
-  weekCount: { fontSize: 14, fontFamily: 'Inter_700Bold' },
-  weekCountLabel: { fontSize: 9, fontFamily: 'Inter_400Regular' },
-  dayLegend: {
-    flexDirection: 'row',
-    paddingLeft: 98,
-    gap: 3,
-    marginTop: -8,
-  },
-  dayLegendLabel: {
-    flex: 1,
-    textAlign: 'center',
+  hmDayLabel: {
     fontSize: 9,
     fontFamily: 'Inter_400Regular',
+  },
+  hmLegend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 3,
+    marginTop: 8,
+  },
+  hmLegendLabel: {
+    fontSize: 9,
+    fontFamily: 'Inter_400Regular',
+  },
+  hmLegendCell: {
+    width: 12,
+    height: 12,
+    borderRadius: 2,
   },
 
   // ── Stats grid ────────────────────────────────────────────────────────────
