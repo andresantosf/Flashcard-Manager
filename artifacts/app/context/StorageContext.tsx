@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import {
@@ -29,21 +30,31 @@ import {
 
 // ── Notification helpers ──────────────────────────────────────────────────────
 
+function formatDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function todayKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return formatDate(new Date());
 }
 
 function currentStreakFromNotes(notes: { createdAt: string }[]): number {
-  const dateSet = new Set(notes.map((n) => n.createdAt.slice(0, 10)));
+  const dateSet = new Set(notes.map((note) => note.createdAt.slice(0, 10)));
   if (dateSet.size === 0) return 0;
+
   let streak = 0;
   const cursor = new Date();
   cursor.setHours(0, 0, 0, 0);
-  const key = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  if (!dateSet.has(key(cursor))) cursor.setDate(cursor.getDate() - 1);
-  while (dateSet.has(key(cursor))) { streak++; cursor.setDate(cursor.getDate() - 1); }
+
+  if (!dateSet.has(formatDate(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  while (dateSet.has(formatDate(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
   return streak;
 }
 
@@ -223,9 +234,18 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
     [notes],
   );
 
+  const notesByDeckId = useMemo(() => {
+    return notes.reduce<Map<string, Note[]>>((groups, note) => {
+      const currentGroup = groups.get(note.deckId) ?? [];
+      currentGroup.push(note);
+      groups.set(note.deckId, currentGroup);
+      return groups;
+    }, new Map());
+  }, [notes]);
+
   const getNotesByDeck = useCallback(
-    (deckId: string) => notes.filter((n) => n.deckId === deckId),
-    [notes],
+    (deckId: string) => notesByDeckId.get(deckId) ?? [],
+    [notesByDeckId],
   );
 
   return (

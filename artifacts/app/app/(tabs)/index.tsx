@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
   Platform,
@@ -24,7 +24,7 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { decks, notes, getNotesByDeck } = useStorage();
+  const { decks, notes } = useStorage();
   const { activeProfile } = useProfile();
 
   const [deckModalVisible, setDeckModalVisible] = useState(false);
@@ -40,31 +40,79 @@ export default function HomeScreen() {
 
   const topPad = insets.top + (Platform.OS === 'web' ? 67 : 0);
 
-  const pendingCount = notes.filter((n) => !n.completed).length;
+  const pendingNotes = useMemo(
+    () => notes.filter((note) => !note.completed),
+    [notes],
+  );
+  const pendingCount = pendingNotes.length;
 
-  const speedDialOptions = [
-    {
-      label: 'Novo Baralho',
-      icon: 'layers' as const,
-      onPress: () => {
-        setDeckToEdit(undefined);
-        setDeckModalVisible(true);
+  const noteCountByDeckId = useMemo(() => {
+    return notes.reduce<Record<string, number>>((acc, note) => {
+      acc[note.deckId] = (acc[note.deckId] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [notes]);
+
+  const noDeckCount = noteCountByDeckId[NO_DECK_ID] ?? 0;
+  const hasAnyContent = decks.length > 0 || noDeckCount > 0;
+
+  const openCreateDeckModal = useCallback(() => {
+    setDeckToEdit(undefined);
+    setDeckModalVisible(true);
+  }, []);
+
+  const openCreateNoteModal = useCallback(() => {
+    setNoteModalDeckId(undefined);
+    setNoteModalVisible(true);
+  }, []);
+
+  const closeDeckModal = useCallback(() => {
+    setDeckModalVisible(false);
+    setDeckToEdit(undefined);
+  }, []);
+
+  const closeNoteModal = useCallback(() => {
+    setNoteModalVisible(false);
+    setNoteModalDeckId(undefined);
+  }, []);
+
+  const openDeckContextMenu = useCallback((deck: Deck) => {
+    setContextDeck(deck);
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextDeck(null);
+  }, []);
+
+  const handleAddNoteToContextDeck = useCallback(() => {
+    setNoteModalDeckId(contextDeck?.id);
+    setNoteModalVisible(true);
+  }, [contextDeck?.id]);
+
+  const handleExportPending = useCallback(() => {
+    exportAnki(pendingNotes, decks);
+  }, [decks, pendingNotes]);
+
+  const speedDialOptions = useMemo(
+    () => [
+      {
+        label: 'Novo Baralho',
+        icon: 'layers' as const,
+        onPress: openCreateDeckModal,
       },
-    },
-    {
-      label: 'Nova Nota',
-      icon: 'file-plus' as const,
-      onPress: () => {
-        setNoteModalDeckId(undefined);
-        setNoteModalVisible(true);
+      {
+        label: 'Nova Nota',
+        icon: 'file-plus' as const,
+        onPress: openCreateNoteModal,
       },
-    },
-    {
-      label: `Baixar para Anki (${pendingCount})`,
-      icon: 'download' as const,
-      onPress: () => exportAnki(notes.filter((n) => !n.completed), decks),
-    },
-  ];
+      {
+        label: `Baixar para Anki (${pendingCount})`,
+        icon: 'download' as const,
+        onPress: handleExportPending,
+      },
+    ],
+    [handleExportPending, openCreateDeckModal, openCreateNoteModal, pendingCount],
+  );
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -96,53 +144,47 @@ export default function HomeScreen() {
       </View>
 
       {/* Deck list */}
-      {(() => {
-        const noDeckCount = getNotesByDeck(NO_DECK_ID).length;
-        const hasAnyContent = decks.length > 0 || noDeckCount > 0;
-        return (
-          <FlatList
-            data={decks}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={[
-              styles.list,
-              { paddingBottom: 120 + (insets.bottom || 0) },
-            ]}
-            scrollEnabled={hasAnyContent}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              noDeckCount === 0 ? (
-                <View style={styles.empty}>
-                  <Text style={[styles.emptyIcon, { color: colors.border }]}>▤</Text>
-                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                    Nenhum baralho ainda
-                  </Text>
-                  <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-                    Toque no + para criar seu primeiro baralho
-                  </Text>
-                </View>
-              ) : null
-            }
-            ListFooterComponent={
-              noDeckCount > 0 ? (
-                <DeckCard
-                  deck={NO_DECK}
-                  cardCount={noDeckCount}
-                  onPress={() => router.push(`/deck/${NO_DECK_ID}`)}
-                  onLongPress={() => setContextDeck(NO_DECK)}
-                />
-              ) : null
-            }
-            renderItem={({ item }) => (
-              <DeckCard
-                deck={item}
-                cardCount={getNotesByDeck(item.id).length}
-                onPress={() => router.push(`/deck/${item.id}`)}
-                onLongPress={() => setContextDeck(item)}
-              />
-            )}
+      <FlatList
+        data={decks}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[
+          styles.list,
+          { paddingBottom: 120 + (insets.bottom || 0) },
+        ]}
+        scrollEnabled={hasAnyContent}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          noDeckCount === 0 ? (
+            <View style={styles.empty}>
+              <Text style={[styles.emptyIcon, { color: colors.border }]}>▤</Text>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                Nenhum baralho ainda
+              </Text>
+              <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+                Toque no + para criar seu primeiro baralho
+              </Text>
+            </View>
+          ) : null
+        }
+        ListFooterComponent={
+          noDeckCount > 0 ? (
+            <DeckCard
+              deck={NO_DECK}
+              cardCount={noDeckCount}
+              onPress={() => router.push(`/deck/${NO_DECK_ID}`)}
+              onLongPress={() => openDeckContextMenu(NO_DECK)}
+            />
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <DeckCard
+            deck={item}
+            cardCount={noteCountByDeckId[item.id] ?? 0}
+            onPress={() => router.push(`/deck/${item.id}`)}
+            onLongPress={() => openDeckContextMenu(item)}
           />
-        );
-      })()}
+        )}
+      />
 
       <SpeedDial
         options={speedDialOptions}
@@ -155,14 +197,14 @@ export default function HomeScreen() {
       {/* Deck create / edit modal */}
       <DeckModal
         visible={deckModalVisible}
-        onClose={() => { setDeckModalVisible(false); setDeckToEdit(undefined); }}
+        onClose={closeDeckModal}
         deckToEdit={deckToEdit}
       />
 
       {/* Note create modal (optionally pre-selects a deck) */}
       <NoteModal
         visible={noteModalVisible}
-        onClose={() => { setNoteModalVisible(false); setNoteModalDeckId(undefined); }}
+        onClose={closeNoteModal}
         deckId={noteModalDeckId}
       />
 
@@ -175,11 +217,8 @@ export default function HomeScreen() {
       <DeckContextMenu
         visible={contextDeck !== null}
         deck={contextDeck}
-        onClose={() => setContextDeck(null)}
-        onAddNote={() => {
-          setNoteModalDeckId(contextDeck?.id);
-          setNoteModalVisible(true);
-        }}
+        onClose={closeContextMenu}
+        onAddNote={handleAddNoteToContextDeck}
         onEditDeck={() => {
           setDeckToEdit(contextDeck ?? undefined);
           setDeckModalVisible(true);
