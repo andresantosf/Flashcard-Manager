@@ -1,0 +1,84 @@
+---
+
+# Calendário de Atividade
+
+Adicionar uma aba exclusiva chamada **Calendário** na barra de navegação inferior do aplicativo.
+
+Essa tela servirá para acompanhar a frequência de criação de cartões e incentivar a consistência nos estudos.
+
+## Visualização mensal
+
+Exibir um calendário mensal tradicional.
+
+Cada dia deve possuir uma pequena bolinha abaixo do número do dia, indicando quantos cartões foram criados naquela data.
+
+A intensidade da bolinha deve variar conforme a quantidade de cartões criados, semelhante ao mapa de contribuições do GitHub.
+
+Exemplo:
+
+* Sem cartões → nenhuma bolinha.
+* 1 a 5 cartões → bolinha pequena e clara.
+* 6 a 15 cartões → bolinha média.
+* 16 a 30 cartões → bolinha grande.
+* Mais de 30 cartões → bolinha grande e com cor mais intensa.
+
+A escala deve ser automática, adaptando-se conforme o histórico do usuário.
+
+Ao tocar em um dia do calendário, deve ser exibido:
+
+* Quantidade de cartões criados.
+* Nome dos baralhos utilizados.
+* Lista dos cartões criados naquele dia.
+* Perfil responsável por cada cartão (André ou Agnis).
+
+---
+
+# Sistema de Ofensiva (Streak)
+
+O aplicativo deve possuir um sistema de ofensiva para incentivar a criação diária de cartões.
+
+Uma ofensiva representa a quantidade de dias consecutivos em que pelo menos **um cartão** foi criado.
+
+## Regras
+
+* Criou pelo menos 1 cartão no dia → mantém a ofensiva.
+* Não criou nenhum cartão → a ofensiva é encerrada.
+* Criando novamente após uma quebra, inicia uma nova ofensiva.
+
+## Informações exibidas
+
+Na parte superior da tela de calendário exibir:
+
+* 🔥 Ofensiva atual (dias consecutivos).
+* 🏆 Maior ofensiva já alcançada.
+* 📅 Total de dias com atividade.
+* 📝 Total de cartões criados.
+* 📚 Total de baralhos.
+
+## Estatísticas
+
+Também exibir:
+
+* Média de cartões criados por dia ativo.
+* Mês mais produtivo.
+* Dia com maior número de cartões criados.
+* Total de cartões criados por perfil (André e Agnis).
+* Gráfico simples mostrando a quantidade de cartões criados por dia nos últimos 30 dias.
+
+---
+
+# Gamificação
+
+Para incentivar a consistência, exibir mensagens motivacionais de acordo com a ofensiva.
+
+Exemplos:
+
+* 🔥 3 dias: "Você está criando um hábito!"
+* 🔥 7 dias: "Uma semana completa!"
+* 🔥 15 dias: "Excelente consistência!"
+* 🔥 30 dias: "Um mês inteiro estudando!"
+* 🔥 100 dias: "Parabéns! Você alcançou uma ofensiva impressionante."
+
+As mensagens devem aparecer apenas quando uma nova marca for alcançada.
+
+Toda a contagem deve ser automática e baseada exclusivamente na data de criação dos cartões, sem exigir qualquer ação manual do usuário.
