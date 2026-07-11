@@ -1,15 +1,15 @@
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # compiled output
-dist
-tmp
-out-tsc
+dist/
+tmp/
+out-tsc/
 *.tsbuildinfo
-.expo
-.expo-shared
+.expo/
+.expo-shared/
 
 # dependencies
-node_modules
+node_modules/
 
 # IDEs and editors
 /.idea
@@ -28,14 +28,14 @@ node_modules
 !.vscode/extensions.json
 
 # misc
-/.sass-cache
+/.sass-cache/
 /connect.lock
-/coverage
+/coverage/
 /libpeerconnection.log
-npm-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-error.log*
 testem.log
-/typings
+/typings/
 
 # System Files
 .DS_Store

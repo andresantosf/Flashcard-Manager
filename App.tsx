@@ -3,10 +3,10 @@ import { StyleSheet, Text, View } from 'react-native';
 
 export default function App() {
   return (
-    <view style={styles.container}>
-      <text>Flashcard Manager</text>
-      <statusbar style="auto" />
-    </view>
+    <View style={styles.container}>
+      <Text style={styles.title}>Flashcard Manager</Text>
+      <StatusBar style="auto" />
+    </View>
   );
 }
 
@@ -16,5 +16,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
   },
 });
