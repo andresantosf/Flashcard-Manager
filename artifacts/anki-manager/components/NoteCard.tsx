@@ -45,7 +45,7 @@ function renderBackText(text: string, color: string, baseStyle: object) {
   return (
     <Text style={[baseStyle, { color }]} numberOfLines={2}>
       {beforeTip && <Text>{beforeTip}</Text>}
-      <Text style={[baseStyle, { color: '#ffff7f', fontStyle: 'italic' }]}>{afterTip}</Text>
+      <Text style={[baseStyle, { color: '#000', fontStyle: 'italic' }]}>{afterTip}</Text>
     </Text>
   );
 }
