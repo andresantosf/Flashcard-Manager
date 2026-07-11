@@ -17,7 +17,8 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.andre_sants.ankimanager"
+      "package": "com.andresantos.flashcard",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
