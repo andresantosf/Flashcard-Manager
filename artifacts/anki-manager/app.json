@@ -44,8 +44,9 @@
       "firebaseMessagingSenderId": "786866735077",
       "firebaseAppId": "1:786866735077:android:e2d816db35c1c4c6b7110c",
       "eas": {
-        "projectId": "b547ced4-fa3d-49c4-9bb9-b8b143e78034"
+        "projectId": "3ccc5d92-9188-48c1-9ac6-5ea92dbc711e"
       }
-    }
+    },
+    "owner": "andre_dos_app"
   }
 }

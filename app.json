@@ -1,12 +1,13 @@
 {
   "expo": {
-    "extra": {
-      "eas": {
-        "projectId": "7ea859b3-3b35-466b-8dd7-bc90b56aee55"
-      }
-    },
     "android": {
       "package": "com.andre_sants.workspace"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "53a3f1ff-76e0-4f2d-9467-b40f14fe1cbf"
+      }
+    },
+    "owner": "andre_dos_app"
   }
 }
