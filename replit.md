@@ -1,15 +1,16 @@
-# [Project name]
+# Workspace
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A pnpm monorepo with an Expo/React Native mobile app, shared library packages, and Firebase integration.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- **Mobile app**: `artifacts/app: expo` workflow (Expo dev server via Metro)
+  - Scan the QR code from the URL bar → Expo Go to test on a physical device
+  - Web preview available at the root path `/`
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/db run push` — push DB schema changes (requires `DATABASE_URL`)
 
 ## Stack
 
