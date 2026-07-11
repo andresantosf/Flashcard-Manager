@@ -29,10 +29,9 @@ function formatDate(iso: string) {
 }
 
 function renderBackText(text: string, color: string, baseStyle: object) {
-  const normalized = text.trim();
-  const hasTip = normalized.startsWith('💡');
+  const tipIndex = text.indexOf('💡');
 
-  if (!hasTip) {
+  if (tipIndex === -1) {
     return (
       <Text style={[baseStyle, { color }]} numberOfLines={2}>
         {text}
@@ -40,12 +39,13 @@ function renderBackText(text: string, color: string, baseStyle: object) {
     );
   }
 
-  const content = normalized.replace(/^💡\s*/, '');
+  const beforeTip = text.substring(0, tipIndex);
+  const afterTip = text.substring(tipIndex);
 
   return (
     <Text style={[baseStyle, { color }]} numberOfLines={2}>
-      <Text style={[baseStyle, { color: '#ffff7f', fontStyle: 'italic' }]}>💡 </Text>
-      <Text style={[baseStyle, { color: '#000', fontStyle: 'italic' }]}>{content}</Text>
+      {beforeTip && <Text>{beforeTip}</Text>}
+      <Text style={[baseStyle, { color: '#ffff7f', fontStyle: 'italic' }]}>{afterTip}</Text>
     </Text>
   );
 }
