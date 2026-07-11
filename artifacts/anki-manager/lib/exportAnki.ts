@@ -51,7 +51,7 @@ export function buildAnkiTsv(notes: Note[], decks: Deck[]): string {
   const rows = notes.map((note) => {
     const deckName = deckMap[note.deckId] ?? 'Sem baralho';
     return [
-      escapeField('Basic (and reversed card)'),
+      escapeField('Básico'),
       escapeField(deckName),
       escapeField(note.front),
       escapeField(formatBackForExport(note.back)),
