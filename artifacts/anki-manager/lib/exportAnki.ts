@@ -174,6 +174,27 @@ function buildImportBat(): string {
 }
 
 /**
+ * Encodes text as UTF-16LE with a leading BOM (0xFF 0xFE).
+ *
+ * cmd.exe has reliably supported Unicode .bat files in this exact encoding
+ * since very old Windows versions (it's the classic "save as Unicode in
+ * Notepad" trick) — unlike UTF-8, which cmd only auto-detects on newer
+ * Windows builds. This is what lets the .bat carry an accented profile
+ * name (e.g. "André Santos") without the path getting mangled.
+ */
+function encodeUtf16LeWithBom(text: string): Uint8Array {
+  const bytes = new Uint8Array(2 + text.length * 2);
+  bytes[0] = 0xff;
+  bytes[1] = 0xfe;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    bytes[2 + i * 2] = code & 0xff;
+    bytes[2 + i * 2 + 1] = (code >> 8) & 0xff;
+  }
+  return bytes;
+}
+
+/**
  * Builds a .zip package ready to import into Anki on Windows:
  *   cartoes_anki.txt      — the Anki-importable TSV (images referenced as
  *                            <img src="arquivo.jpg">)
@@ -212,7 +233,7 @@ export async function exportAnki(notes: Note[], decks: Deck[]): Promise<void> {
 
     const tsv = buildAnkiTsv(notes, decks, imageFilenames);
     zip.file('cartoes_anki.txt', tsv);
-    zip.file('IMPORTAR_NO_ANKI.bat', buildImportBat());
+    zip.file('IMPORTAR_NO_ANKI.bat', encodeUtf16LeWithBom(buildImportBat()));
 
     const fileName = `anki_export_${new Date().toISOString().slice(0, 10)}.zip`;
 
