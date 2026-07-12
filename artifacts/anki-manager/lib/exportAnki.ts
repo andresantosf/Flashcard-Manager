@@ -1,7 +1,15 @@
+import JSZip from 'jszip';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert, Platform } from 'react-native';
 import type { Note, Deck } from '@/context/StorageContext';
+
+/**
+ * Name of the Anki profile whose collection.media folder will receive the
+ * exported images. Edit this if your Anki profile has a different name —
+ * it's also editable directly in the generated .bat file.
+ */
+const ANKI_PROFILE_NAME = 'André Santos';
 
 /**
  * Escapes a single TSV field per Anki import spec:
@@ -36,7 +44,11 @@ function formatBackForExport(value: string): string {
  *   #tags column:5
  *   Basic (and reversed card)  <tab>  <deck>  <tab>  <front>  <tab>  <back>  <tab>  (empty tags)
  */
-export function buildAnkiTsv(notes: Note[], decks: Deck[]): string {
+export function buildAnkiTsv(
+  notes: Note[],
+  decks: Deck[],
+  imageFilenames?: Record<string, string>,
+): string {
   const deckMap: Record<string, string> = {};
   decks.forEach((d) => { deckMap[d.id] = d.name; });
 
@@ -50,11 +62,16 @@ export function buildAnkiTsv(notes: Note[], decks: Deck[]): string {
 
   const rows = notes.map((note) => {
     const deckName = deckMap[note.deckId] ?? 'Sem baralho';
+    let back = formatBackForExport(note.back);
+    const imageFile = imageFilenames?.[note.id];
+    if (imageFile) {
+      back = `${back}<br><img src="${imageFile}">`;
+    }
     return [
       escapeField('Básico'),
       escapeField(deckName),
       escapeField(note.front),
-      escapeField(formatBackForExport(note.back)),
+      escapeField(back),
       '', // tags column — empty
     ].join('\t');
   });
@@ -63,9 +80,110 @@ export function buildAnkiTsv(notes: Note[], decks: Deck[]): string {
 }
 
 /**
- * Triggers a download/share of the Anki TSV file.
- * - On web   → Blob URL + hidden <a> click.
- * - On native → expo-file-system write + expo-sharing sheet.
+ * Guesses a file extension for an exported image from its remote URL or
+ * blob content-type. Defaults to "jpg" when nothing useful is found.
+ */
+function guessImageExtension(url: string, contentType?: string | null): string {
+  const fromType = contentType?.split('/')[1]?.split(';')[0]?.split('+')[0];
+  if (fromType && /^[a-z0-9]+$/i.test(fromType)) return fromType.toLowerCase();
+  const match = url.match(/\.([a-zA-Z0-9]{2,5})(?:\?|#|$)/);
+  return match ? match[1].toLowerCase() : 'jpg';
+}
+
+/**
+ * Downloads a remote image (e.g. an imgbb URL) and returns it as base64
+ * plus a guessed extension, ready to be embedded in a zip file.
+ */
+async function fetchImageAsBase64(
+  url: string,
+): Promise<{ base64: string; ext: string } | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    const ext = guessImageExtension(url, blob.type);
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read image blob'));
+      reader.onload = () => {
+        const result = reader.result as string;
+        const comma = result.indexOf(',');
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.readAsDataURL(blob);
+    });
+    return { base64, ext };
+  } catch (err) {
+    console.error('[exportAnki] failed to fetch image for export', url, err);
+    return null;
+  }
+}
+
+/**
+ * Builds a Windows .bat script that:
+ * 1. Copies the exported images into the local Anki profile's
+ *    collection.media folder.
+ * 2. Launches anki.exe pointing at cartoes_anki.txt, which makes Anki open
+ *    its import dialog for that file automatically.
+ */
+function buildImportBat(): string {
+  return [
+    '@echo off',
+    'setlocal',
+    '',
+    'rem Se o nome do seu perfil no Anki for diferente, edite a linha abaixo:',
+    `set "PERFIL=${ANKI_PROFILE_NAME}"`,
+    '',
+    'set "MEDIA_DIR=%APPDATA%\\Anki2\\%PERFIL%\\collection.media"',
+    'set "SCRIPT_DIR=%~dp0"',
+    '',
+    'if not exist "%MEDIA_DIR%" (',
+    '  echo Pasta de midia do Anki nao encontrada:',
+    '  echo   "%MEDIA_DIR%"',
+    '  echo Edite a linha "set PERFIL=" neste arquivo com o nome exato do seu perfil no Anki.',
+    '  pause',
+    '  exit /b 1',
+    ')',
+    '',
+    'if exist "%SCRIPT_DIR%images\\*" (',
+    '  echo Copiando imagens para o Anki...',
+    '  xcopy /Y /I "%SCRIPT_DIR%images\\*" "%MEDIA_DIR%\\" >nul',
+    ')',
+    '',
+    'set "ANKI_EXE="',
+    'if exist "%LOCALAPPDATA%\\Programs\\Anki\\anki.exe" set "ANKI_EXE=%LOCALAPPDATA%\\Programs\\Anki\\anki.exe"',
+    'if not defined ANKI_EXE if exist "%PROGRAMFILES%\\Anki\\anki.exe" set "ANKI_EXE=%PROGRAMFILES%\\Anki\\anki.exe"',
+    'if not defined ANKI_EXE if exist "%PROGRAMFILES(X86)%\\Anki\\anki.exe" set "ANKI_EXE=%PROGRAMFILES(X86)%\\Anki\\anki.exe"',
+    '',
+    'if not defined ANKI_EXE (',
+    '  echo Nao encontrei o anki.exe automaticamente.',
+    '  echo Abra o Anki manualmente e importe o arquivo:',
+    '  echo   "%SCRIPT_DIR%cartoes_anki.txt"',
+    '  pause',
+    '  exit /b 1',
+    ')',
+    '',
+    'echo Abrindo o Anki para importar os cartoes...',
+    'start "" "%ANKI_EXE%" "%SCRIPT_DIR%cartoes_anki.txt"',
+    '',
+    'echo.',
+    'echo Pronto! Se a janela de importacao nao abrir automaticamente,',
+    'echo vá em Arquivo ^> Importar e selecione cartoes_anki.txt',
+    'pause',
+  ].join('\r\n');
+}
+
+/**
+ * Builds a .zip package ready to import into Anki on Windows:
+ *   cartoes_anki.txt      — the Anki-importable TSV (images referenced as
+ *                            <img src="arquivo.jpg">)
+ *   images/*               — every image used by the exported cards
+ *   IMPORTAR_NO_ANKI.bat   — copies the images into collection.media and
+ *                            launches anki.exe with the .txt file so the
+ *                            import dialog opens automatically
+ *
+ * Triggers a download (web) or the native share sheet (iOS/Android) with
+ * the resulting .zip.
  *
  * Accepts the already-filtered pending notes (caller's responsibility).
  */
@@ -79,11 +197,27 @@ export async function exportAnki(notes: Note[], decks: Deck[]): Promise<void> {
   }
 
   try {
-    const content = buildAnkiTsv(notes, decks);
-    const fileName = `cartoes_anki_${new Date().toISOString().slice(0, 10)}.txt`;
+    const zip = new JSZip();
+    const imagesFolder = zip.folder('images');
+    const imageFilenames: Record<string, string> = {};
+
+    for (const note of notes) {
+      if (!note.imageUrl || !imagesFolder) continue;
+      const result = await fetchImageAsBase64(note.imageUrl);
+      if (!result) continue;
+      const filename = `img_${note.id}.${result.ext}`;
+      imagesFolder.file(filename, result.base64, { base64: true });
+      imageFilenames[note.id] = filename;
+    }
+
+    const tsv = buildAnkiTsv(notes, decks, imageFilenames);
+    zip.file('cartoes_anki.txt', tsv);
+    zip.file('IMPORTAR_NO_ANKI.bat', buildImportBat());
+
+    const fileName = `anki_export_${new Date().toISOString().slice(0, 10)}.zip`;
 
     if (Platform.OS === 'web') {
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const blob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -95,10 +229,11 @@ export async function exportAnki(notes: Note[], decks: Deck[]): Promise<void> {
       return;
     }
 
-    // Native: write to cache dir then open share sheet
+    // Native: write the zip to cache dir then open the share sheet
+    const base64Zip = await zip.generateAsync({ type: 'base64' });
     const path = `${FileSystem.cacheDirectory}${fileName}`;
-    await FileSystem.writeAsStringAsync(path, content, {
-      encoding: FileSystem.EncodingType.UTF8,
+    await FileSystem.writeAsStringAsync(path, base64Zip, {
+      encoding: FileSystem.EncodingType.Base64,
     });
 
     const canShare = await Sharing.isAvailableAsync();
@@ -111,9 +246,9 @@ export async function exportAnki(notes: Note[], decks: Deck[]): Promise<void> {
     }
 
     await Sharing.shareAsync(path, {
-      mimeType: 'text/plain',
+      mimeType: 'application/zip',
       dialogTitle: 'Exportar cartões para o Anki',
-      UTI: 'public.plain-text',
+      UTI: 'com.pkware.zip-archive',
     });
   } catch (err) {
     console.error('[exportAnki]', err);
