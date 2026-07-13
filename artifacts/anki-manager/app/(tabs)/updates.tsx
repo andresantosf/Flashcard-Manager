@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
   Image,
   Modal,
@@ -11,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
@@ -19,6 +21,11 @@ import { useProfile, PROFILES } from '@/context/ProfileContext';
 import { NoteModal } from '@/components/NoteModal';
 import { ContextMenu } from '@/components/ContextMenu';
 import { ProfileMenu, ProfileAvatar } from '@/components/ProfileMenu';
+import { SelectionBar } from '@/components/SelectionBar';
+import { BulkActionsSheet } from '@/components/BulkActionsSheet';
+import { DeckPickerSheet } from '@/components/DeckPickerSheet';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useCardSelection } from '@/hooks/useCardSelection';
 
 const PAGE_SIZE = 20;
 
@@ -39,6 +46,8 @@ interface FeedItemProps {
   deckColor: string;
   onPress: () => void;
   onLongPress?: () => void;
+  selectionMode?: boolean;
+  selected?: boolean;
 }
 
 function renderBackText(text: string, color: string, baseStyle: object) {
@@ -63,12 +72,47 @@ function renderBackText(text: string, color: string, baseStyle: object) {
   );
 }
 
-function FeedItem({ note, deckName, deckColor, onPress, onLongPress }: FeedItemProps) {
+function FeedItem({
+  note,
+  deckName,
+  deckColor,
+  onPress,
+  onLongPress,
+  selectionMode,
+  selected,
+}: FeedItemProps) {
   const colors = useColors();
   const wasLongPressed = React.useRef(false);
   const [imageVisible, setImageVisible] = useState(false);
+  const selectAnim = useRef(new Animated.Value(selected ? 1 : 0)).current;
+  const modeAnim = useRef(new Animated.Value(selectionMode ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(selectAnim, { toValue: selected ? 1 : 0, duration: 180, useNativeDriver: false }).start();
+  }, [selected]);
+
+  useEffect(() => {
+    Animated.timing(modeAnim, { toValue: selectionMode ? 1 : 0, duration: 180, useNativeDriver: false }).start();
+  }, [selectionMode]);
+
+  const selectedBorderColor = selectAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', colors.primary],
+  });
+
   return (
     <>
+      <Animated.View
+        style={[
+          styles.item,
+          {
+            backgroundColor: note.completed ? colors.muted : colors.card,
+            borderLeftColor: note.completed ? colors.border : deckColor,
+            borderWidth: selected ? 2 : 0,
+            borderColor: selected ? selectedBorderColor : 'transparent',
+          },
+        ]}
+      >
       <Pressable
         onPress={() => {
           if (wasLongPressed.current) {
@@ -82,15 +126,25 @@ function FeedItem({ note, deckName, deckColor, onPress, onLongPress }: FeedItemP
           if (onLongPress) onLongPress();
         }}
         delayLongPress={400}
-        style={({ pressed }) => [
-          styles.item,
-          {
-            backgroundColor: note.completed ? colors.muted : colors.card,
-            opacity: pressed ? 0.8 : 1,
-            borderLeftColor: note.completed ? colors.border : deckColor,
-          },
-        ]}
+        style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
       >
+        {/* Selection checkbox indicator */}
+        {selectionMode && (
+          <Animated.View
+            style={[
+              styles.checkbox,
+              {
+                opacity: modeAnim,
+                transform: [{ scale: modeAnim }],
+                backgroundColor: selected ? colors.primary : 'transparent',
+                borderColor: selected ? colors.primary : colors.border,
+              },
+            ]}
+          >
+            {selected && <Feather name="check" size={13} color="#fff" />}
+          </Animated.View>
+        )}
+
         {/* Author + deck + date row */}
         <View style={styles.itemHeader}>
           {/* Author avatar */}
@@ -157,6 +211,7 @@ function FeedItem({ note, deckName, deckColor, onPress, onLongPress }: FeedItemP
           </Pressable>
         ) : null}
       </Pressable>
+      </Animated.View>
 
       {note.imageUrl ? (
         <Modal visible={imageVisible} transparent animationType="fade">
@@ -180,7 +235,8 @@ function FeedItem({ note, deckName, deckColor, onPress, onLongPress }: FeedItemP
 export default function UpdatesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { notes, decks, toggleNoteCompleted, deleteNote } = useStorage();
+  const { notes, decks, toggleNoteCompleted, deleteNote, bulkMoveNotes, bulkSetCompleted, bulkDeleteNotes } =
+    useStorage();
   const [contextNote, setContextNote] = useState<Note | null>(null);
   const { activeProfile } = useProfile();
 
@@ -188,6 +244,18 @@ export default function UpdatesScreen() {
   const [editNote, setEditNote] = useState<Note | null>(null);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [selectedDeckId, setSelectedDeckId] = useState<string>('all');
+
+  const selection = useCardSelection();
+  const [bulkSheetVisible, setBulkSheetVisible] = useState(false);
+  const [deckPickerVisible, setDeckPickerVisible] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+
+  // Selection is per-screen: clear it whenever the tab loses focus.
+  useFocusEffect(
+    useCallback(() => {
+      return () => selection.clearSelection();
+    }, [selection.clearSelection]),
+  );
 
   const deckMap = useMemo(() => {
     const m: Record<string, { name: string; color: string }> = {};
@@ -225,8 +293,39 @@ export default function UpdatesScreen() {
 
   const topPad = insets.top + (Platform.OS === 'web' ? 67 : 0);
 
+  const visibleIds = useMemo(() => visible.map((n) => n.id), [visible]);
+  const selectedNotes = useMemo(
+    () => notes.filter((n) => selection.selectedIds.has(n.id)),
+    [notes, selection.selectedIds],
+  );
+
+  const runBulkAction = useCallback(
+    async (action: () => Promise<void>) => {
+      // Snapshot is already captured by the caller's closure before this
+      // clears the selection, so the mutation always targets the ids the
+      // user actually picked.
+      selection.clearSelection();
+      try {
+        await action();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('bulk action failed', err);
+      }
+    },
+    [selection],
+  );
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
+      {selection.selectionMode ? (
+        <SelectionBar
+          count={selection.selectedCount}
+          topInset={insets.top}
+          onCancel={selection.clearSelection}
+          onMenu={() => setBulkSheetVisible(true)}
+        />
+      ) : (
+      <>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
         <View style={styles.headerRow}>
@@ -344,6 +443,8 @@ export default function UpdatesScreen() {
           })()}
         </ScrollView>
       </View>
+      </>
+      )}
 
       <FlatList
         data={visible}
@@ -373,8 +474,18 @@ export default function UpdatesScreen() {
               note={item}
               deckName={deck?.name ?? 'Baralho removido'}
               deckColor={deck?.color ?? colors.mutedForeground}
-              onPress={() => setEditNote(item)}
-              onLongPress={() => setContextNote(item)}
+              selectionMode={selection.selectionMode}
+              selected={selection.isSelected(item.id)}
+              onPress={() => {
+                if (selection.selectionMode) {
+                  selection.toggleSelect(item.id);
+                } else {
+                  setEditNote(item);
+                }
+              }}
+              onLongPress={() => {
+                if (!selection.selectionMode) setContextNote(item);
+              }}
             />
           );
         }}
@@ -396,6 +507,12 @@ export default function UpdatesScreen() {
       <ContextMenu
         visible={!!contextNote && !editNote}
         onClose={() => setContextNote(null)}
+        onSelect={() => {
+          if (contextNote) {
+            selection.enterSelection(contextNote.id);
+            setContextNote(null);
+          }
+        }}
         onEdit={() => {
           setEditNote(contextNote);
           setContextNote(null);
@@ -419,6 +536,42 @@ export default function UpdatesScreen() {
       <ProfileMenu
         visible={profileMenuVisible}
         onClose={() => setProfileMenuVisible(false)}
+      />
+
+      <BulkActionsSheet
+        visible={bulkSheetVisible}
+        onClose={() => setBulkSheetVisible(false)}
+        onChangeDeck={() => setDeckPickerVisible(true)}
+        onMarkCompleted={() => runBulkAction(() => bulkSetCompleted(selectedNotes.map((n) => n.id), true))}
+        onMarkNotCompleted={() => runBulkAction(() => bulkSetCompleted(selectedNotes.map((n) => n.id), false))}
+        onDelete={() => setDeleteConfirmVisible(true)}
+        onSelectAll={() => selection.selectAll(visibleIds)}
+        onClearSelection={selection.clearSelection}
+        onInvertSelection={() => selection.invertSelection(visibleIds)}
+      />
+
+      <DeckPickerSheet
+        visible={deckPickerVisible}
+        decks={decks}
+        onClose={() => setDeckPickerVisible(false)}
+        onSelectDeck={(deckId) =>
+          runBulkAction(() => bulkMoveNotes(selectedNotes.map((n) => n.id), deckId))
+        }
+      />
+
+      <ConfirmDialog
+        visible={deleteConfirmVisible}
+        title="Excluir cartões"
+        message={`Deseja realmente excluir ${selection.selectedCount} ${
+          selection.selectedCount === 1 ? 'cartão' : 'cartões'
+        }?`}
+        confirmLabel="Excluir"
+        destructive
+        onCancel={() => setDeleteConfirmVisible(false)}
+        onConfirm={() => {
+          setDeleteConfirmVisible(false);
+          runBulkAction(() => bulkDeleteNotes(selectedNotes.map((n) => n.id)));
+        }}
       />
     </View>
   );
@@ -478,6 +631,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
+  },
+  checkbox: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
   },
   itemHeader: {
     flexDirection: 'row',

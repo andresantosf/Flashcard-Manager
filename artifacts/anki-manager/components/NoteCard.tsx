@@ -1,5 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Image,
   Modal,
   Pressable,
@@ -17,6 +18,10 @@ interface NoteCardProps {
   note: Note;
   onPress: () => void;
   onLongPress: () => void;
+  /** Whether the screen is currently in multi-select mode. */
+  selectionMode?: boolean;
+  /** Whether this specific card is selected (only meaningful in selection mode). */
+  selected?: boolean;
 }
 
 function formatDate(iso: string) {
@@ -50,13 +55,38 @@ function renderBackText(text: string, color: string, baseStyle: object) {
   );
 }
 
-export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
+export function NoteCard({ note, onPress, onLongPress, selectionMode, selected }: NoteCardProps) {
   const colors = useColors();
   const wasLongPressed = useRef(false);
   const [imageVisible, setImageVisible] = useState(false);
+  const selectAnim = useRef(new Animated.Value(selected ? 1 : 0)).current;
+  const modeAnim = useRef(new Animated.Value(selectionMode ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(selectAnim, { toValue: selected ? 1 : 0, duration: 180, useNativeDriver: false }).start();
+  }, [selected]);
+
+  useEffect(() => {
+    Animated.timing(modeAnim, { toValue: selectionMode ? 1 : 0, duration: 180, useNativeDriver: false }).start();
+  }, [selectionMode]);
+
+  const borderColor = selectAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', colors.primary],
+  });
 
   return (
     <>
+      <Animated.View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.card,
+            borderWidth: note.completed || selected ? 2 : 0,
+            borderColor: selected ? borderColor : note.completed ? colors.success : 'transparent',
+          },
+        ]}
+      >
       <Pressable
         onPress={() => {
           if (wasLongPressed.current) {
@@ -70,16 +100,25 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
         onLongPress();
       }}
       delayLongPress={400}
-      style={({ pressed }) => [
-        styles.card,
-        {
-          backgroundColor: colors.card,
-          opacity: pressed ? 0.8 : 1,
-          borderWidth: note.completed ? 2 : 0,
-          borderColor: note.completed ? colors.success : 'transparent',
-        },
-      ]}
+      style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
     >
+      {/* Selection checkbox indicator */}
+      {selectionMode && (
+        <Animated.View
+          style={[
+            styles.checkbox,
+            {
+              opacity: modeAnim,
+              transform: [{ scale: modeAnim }],
+              backgroundColor: selected ? colors.primary : 'transparent',
+              borderColor: selected ? colors.primary : colors.border,
+            },
+          ]}
+        >
+          {selected && <Feather name="check" size={13} color="#fff" />}
+        </Animated.View>
+      )}
+
       {/* Author row */}
       <View style={styles.authorRow}>
         {note.authorInitials && note.authorColor ? (
@@ -126,7 +165,8 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
           <Image source={{ uri: note.imageUrl }} style={styles.noteImage} />
         </Pressable>
       ) : null}
-    </Pressable>
+      </Pressable>
+      </Animated.View>
 
     {note.imageUrl ? (
       <Modal visible={imageVisible} transparent animationType="fade">
@@ -159,6 +199,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
+  },
+  checkbox: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
   },
   authorRow: {
     flexDirection: 'row',

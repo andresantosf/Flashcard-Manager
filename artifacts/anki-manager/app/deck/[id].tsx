@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   FlatList,
   Platform,
@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +19,11 @@ import { NoteModal } from '@/components/NoteModal';
 import { DeckModal } from '@/components/DeckModal';
 import { ContextMenu } from '@/components/ContextMenu';
 import { ProfileMenu, ProfileAvatar } from '@/components/ProfileMenu';
+import { SelectionBar } from '@/components/SelectionBar';
+import { BulkActionsSheet } from '@/components/BulkActionsSheet';
+import { DeckPickerSheet } from '@/components/DeckPickerSheet';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useCardSelection } from '@/hooks/useCardSelection';
 import { useProfile } from '@/context/ProfileContext';
 
 export default function DeckScreen() {
@@ -26,8 +31,16 @@ export default function DeckScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { decks, getNotesByDeck, toggleNoteCompleted, deleteNote, deleteDeck } =
-    useStorage();
+  const {
+    decks,
+    getNotesByDeck,
+    toggleNoteCompleted,
+    deleteNote,
+    deleteDeck,
+    bulkMoveNotes,
+    bulkSetCompleted,
+    bulkDeleteNotes,
+  } = useStorage();
   const { activeProfile } = useProfile();
 
   // Support the virtual "Sem baralho" deck that lives only in the client
@@ -47,6 +60,35 @@ export default function DeckScreen() {
   const [contextNote, setContextNote] = useState<Note | null>(null);
   const [editNoteVisible, setEditNoteVisible] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+
+  const selection = useCardSelection();
+  const [bulkSheetVisible, setBulkSheetVisible] = useState(false);
+  const [deckPickerVisible, setDeckPickerVisible] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+
+  // Selection is per-screen: clear it whenever this screen loses focus
+  // (navigating to another deck, back to the tabs, etc.).
+  useFocusEffect(
+    useCallback(() => {
+      return () => selection.clearSelection();
+    }, [selection.clearSelection]),
+  );
+
+  const selectedNotes = notes.filter((n) => selection.selectedIds.has(n.id));
+  const noteIds = notes.map((n) => n.id);
+
+  const runBulkAction = useCallback(
+    async (action: () => Promise<void>) => {
+      selection.clearSelection();
+      try {
+        await action();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('bulk action failed', err);
+      }
+    },
+    [selection],
+  );
 
   // Auto-open a specific note for editing when navigated from the calendar
   const openNoteHandled = React.useRef(false);
@@ -90,35 +132,48 @@ export default function DeckScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <Stack.Screen
-        options={{
-          title: deck.name,
-          headerRight: () => (
-            <View style={styles.headerActions}>
-              {/* Profile avatar */}
-              <Pressable
-                onPress={() => setProfileMenuVisible(true)}
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-              >
-                <ProfileAvatar
-                  photo={activeProfile.photo}
-                  initials={activeProfile.initials}
-                  color={activeProfile.color}
-                  size={30}
-                />
-              </Pressable>
-              {/* More options — hidden for the virtual deck */}
-              {!isVirtualDeck && (
-                <Pressable
-                  onPress={() => setEditDeckVisible(true)}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-                >
-                  <Feather name="more-horizontal" size={22} color={colors.foreground} />
-                </Pressable>
-              )}
-            </View>
-          ),
-        }}
+        options={
+          selection.selectionMode
+            ? { headerShown: false }
+            : {
+                title: deck.name,
+                headerRight: () => (
+                  <View style={styles.headerActions}>
+                    {/* Profile avatar */}
+                    <Pressable
+                      onPress={() => setProfileMenuVisible(true)}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                    >
+                      <ProfileAvatar
+                        photo={activeProfile.photo}
+                        initials={activeProfile.initials}
+                        color={activeProfile.color}
+                        size={30}
+                      />
+                    </Pressable>
+                    {/* More options — hidden for the virtual deck */}
+                    {!isVirtualDeck && (
+                      <Pressable
+                        onPress={() => setEditDeckVisible(true)}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                      >
+                        <Feather name="more-horizontal" size={22} color={colors.foreground} />
+                      </Pressable>
+                    )}
+                  </View>
+                ),
+              }
+        }
       />
+
+      {selection.selectionMode && (
+        <SelectionBar
+          count={selection.selectedCount}
+          topInset={insets.top}
+          onCancel={selection.clearSelection}
+          onMenu={() => setBulkSheetVisible(true)}
+        />
+      )}
 
       {/* Deck color accent bar */}
       <View style={[styles.colorAccent, { backgroundColor: deck.color + '20' }]}>
@@ -151,12 +206,18 @@ export default function DeckScreen() {
         renderItem={({ item }) => (
           <NoteCard
             note={item}
+            selectionMode={selection.selectionMode}
+            selected={selection.isSelected(item.id)}
             onPress={() => {
-              setContextNote(item);
-              setEditNoteVisible(true);
+              if (selection.selectionMode) {
+                selection.toggleSelect(item.id);
+              } else {
+                setContextNote(item);
+                setEditNoteVisible(true);
+              }
             }}
             onLongPress={() => {
-              setContextNote(item);
+              if (!selection.selectionMode) setContextNote(item);
             }}
           />
         )}
@@ -189,6 +250,12 @@ export default function DeckScreen() {
       <ContextMenu
         visible={!!contextNote && !editNoteVisible}
         onClose={() => setContextNote(null)}
+        onSelect={() => {
+          if (contextNote) {
+            selection.enterSelection(contextNote.id);
+            setContextNote(null);
+          }
+        }}
         onEdit={() => setEditNoteVisible(true)}
         onToggleCompleted={async () => {
           if (contextNote) {
@@ -209,6 +276,42 @@ export default function DeckScreen() {
       <ProfileMenu
         visible={profileMenuVisible}
         onClose={() => setProfileMenuVisible(false)}
+      />
+
+      <BulkActionsSheet
+        visible={bulkSheetVisible}
+        onClose={() => setBulkSheetVisible(false)}
+        onChangeDeck={() => setDeckPickerVisible(true)}
+        onMarkCompleted={() => runBulkAction(() => bulkSetCompleted(selectedNotes.map((n) => n.id), true))}
+        onMarkNotCompleted={() => runBulkAction(() => bulkSetCompleted(selectedNotes.map((n) => n.id), false))}
+        onDelete={() => setDeleteConfirmVisible(true)}
+        onSelectAll={() => selection.selectAll(noteIds)}
+        onClearSelection={selection.clearSelection}
+        onInvertSelection={() => selection.invertSelection(noteIds)}
+      />
+
+      <DeckPickerSheet
+        visible={deckPickerVisible}
+        decks={decks}
+        onClose={() => setDeckPickerVisible(false)}
+        onSelectDeck={(deckId) =>
+          runBulkAction(() => bulkMoveNotes(selectedNotes.map((n) => n.id), deckId))
+        }
+      />
+
+      <ConfirmDialog
+        visible={deleteConfirmVisible}
+        title="Excluir cartões"
+        message={`Deseja realmente excluir ${selection.selectedCount} ${
+          selection.selectedCount === 1 ? 'cartão' : 'cartões'
+        }?`}
+        confirmLabel="Excluir"
+        destructive
+        onCancel={() => setDeleteConfirmVisible(false)}
+        onConfirm={() => {
+          setDeleteConfirmVisible(false);
+          runBulkAction(() => bulkDeleteNotes(selectedNotes.map((n) => n.id)));
+        }}
       />
     </View>
   );

@@ -14,6 +14,7 @@ import { useColors } from '@/hooks/useColors';
 interface ContextMenuProps {
   visible: boolean;
   onClose: () => void;
+  onSelect?: () => void;
   onEdit: () => void;
   onToggleCompleted: () => void;
   onDelete: () => void;
@@ -23,6 +24,7 @@ interface ContextMenuProps {
 export function ContextMenu({
   visible,
   onClose,
+  onSelect,
   onEdit,
   onToggleCompleted,
   onDelete,
@@ -87,6 +89,18 @@ export function ContextMenu({
         ]}
       >
         <View style={styles.handle} />
+
+        {onSelect && (
+          <>
+            <MenuItem
+              icon="check-square"
+              label="Selecionar"
+              color={colors.foreground}
+              onPress={() => handleAction(onSelect)}
+            />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          </>
+        )}
 
         <MenuItem
           icon="edit-2"

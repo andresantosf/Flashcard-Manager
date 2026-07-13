@@ -1,0 +1,97 @@
+Seleção múltipla e edição em massa
+
+O aplicativo deve permitir selecionar vários cartões simultaneamente para executar ações em lote.
+
+Essa funcionalidade deve estar disponível em qualquer tela onde cartões sejam exibidos, incluindo:
+
+Feed de um baralho.
+Resultados de pesquisa.
+Tela do calendário.
+Lista de cartões recentes.
+Qualquer outra tela contendo cartões.
+Entrando no modo de seleção
+
+Ao realizar um toque longo sobre um cartão, deve aparecer um menu com a opção:
+
+Selecionar
+
+Ao tocar em Selecionar, o aplicativo entra no Modo de Seleção.
+
+Nesse momento:
+
+o cartão escolhido já inicia selecionado;
+cada cartão passa a exibir uma caixa de seleção (checkbox) ou indicador visual;
+tocar em outros cartões adiciona ou remove da seleção;
+a interface muda para indicar que o usuário está selecionando múltiplos cartões.
+
+A barra superior deve ser substituída por uma barra contextual contendo:
+
+Quantidade de cartões selecionados.
+Botão "Cancelar".
+Menu de ações em massa.
+
+Exemplo:
+
+←   12 cartões selecionados               ⋮
+Ações em massa
+
+O menu de ações deve oferecer:
+
+Alterar baralho
+
+Permitir escolher um novo baralho.
+
+Todos os cartões selecionados devem ser movidos simultaneamente para esse baralho.
+
+Marcar como concluído
+
+Todos os cartões selecionados passam para o estado Concluído.
+
+Marcar como não concluído
+
+Remove o estado de concluído de todos os cartões selecionados.
+
+Excluir cartões
+
+Excluir todos os cartões selecionados.
+
+Antes da exclusão deve aparecer uma confirmação:
+
+Deseja realmente excluir 18 cartões?
+
+Botões:
+
+Cancelar
+Excluir
+Seleção inteligente
+
+Adicionar também:
+
+Selecionar todos os cartões da tela.
+Limpar seleção.
+Inverter seleção.
+Indicadores visuais
+
+Durante o modo de seleção:
+
+cartões selecionados recebem uma borda destacada;
+um check aparece sobre o cartão;
+cartões não selecionados permanecem normais.
+
+A mudança deve ocorrer com uma animação suave.
+
+Persistência
+
+Caso o usuário navegue para outra tela enquanto o modo de seleção estiver ativo, a seleção deve ser automaticamente cancelada para evitar ações acidentais.
+
+Desempenho
+
+A seleção múltipla deve funcionar mesmo com centenas ou milhares de cartões, sem perda perceptível de desempenho.
+
+As operações em massa (mover, excluir ou marcar como concluído) devem ser executadas em uma única transação, garantindo rapidez e consistência dos dados.
+
+Experiência do usuário
+
+Toda a experiência deve ser semelhante aos aplicativos Google Fotos, Gmail e Arquivos, onde o modo de seleção é intuitivo, rápido e permite gerenciar grandes quantidades de itens com poucos toques.
+
+O objetivo é que o usuário consiga reorganizar dezenas ou centenas de cartões em poucos segundos, sem precisar editar cada um individualmente.

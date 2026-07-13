@@ -1,0 +1,2 @@
+- [Anki Manager: multi-select scope](anki-manager-multiselect-scope.md) — bulk card selection only applies to real card-list screens (deck detail, updates feed), not calendar/search.
+- [Firestore bulk writes](firestore-bulk-writes.md) — writeBatch caps at 500 ops; chunk large id lists into sequential batches for bulk mutations.

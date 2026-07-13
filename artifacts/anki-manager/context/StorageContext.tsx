@@ -94,6 +94,12 @@ interface StorageContextType {
   deleteNote: (id: string) => Promise<void>;
   toggleNoteCompleted: (id: string) => Promise<void>;
   getNotesByDeck: (deckId: string) => Note[];
+  /** Moves every listed note to `deckId` in one/few Firestore batches. */
+  bulkMoveNotes: (ids: string[], deckId: string) => Promise<void>;
+  /** Marks every listed note completed/not-completed in one/few batches. */
+  bulkSetCompleted: (ids: string[], completed: boolean) => Promise<void>;
+  /** Deletes every listed note in one/few Firestore batches. */
+  bulkDeleteNotes: (ids: string[]) => Promise<void>;
 }
 
 /** Virtual deck id — notes without a real deck are stored under this id */
@@ -229,6 +235,54 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
     [notes],
   );
 
+  // Firestore caps a single batch at 500 writes, so bulk helpers below split
+  // large selections into chunks and commit them back-to-back. Each chunk is
+  // still atomic; this keeps bulk actions fast and consistent even for
+  // selections spanning hundreds/thousands of cards.
+  const BATCH_CHUNK_SIZE = 450;
+
+  const runBatchedWrite = useCallback(
+    async (ids: string[], apply: (batch: ReturnType<typeof writeBatch>, id: string) => void) => {
+      for (let i = 0; i < ids.length; i += BATCH_CHUNK_SIZE) {
+        const chunk = ids.slice(i, i + BATCH_CHUNK_SIZE);
+        const batch = writeBatch(db);
+        chunk.forEach((id) => apply(batch, id));
+        await batch.commit();
+      }
+    },
+    [],
+  );
+
+  const bulkMoveNotes = useCallback(
+    async (ids: string[], deckId: string) => {
+      if (ids.length === 0) return;
+      await runBatchedWrite(ids, (batch, id) => {
+        batch.update(doc(db, NOTES, id), { deckId });
+      });
+    },
+    [runBatchedWrite],
+  );
+
+  const bulkSetCompleted = useCallback(
+    async (ids: string[], completed: boolean) => {
+      if (ids.length === 0) return;
+      await runBatchedWrite(ids, (batch, id) => {
+        batch.update(doc(db, NOTES, id), { completed });
+      });
+    },
+    [runBatchedWrite],
+  );
+
+  const bulkDeleteNotes = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      await runBatchedWrite(ids, (batch, id) => {
+        batch.delete(doc(db, NOTES, id));
+      });
+    },
+    [runBatchedWrite],
+  );
+
   return (
     <StorageContext.Provider
       value={{
@@ -243,6 +297,9 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
         deleteNote,
         toggleNoteCompleted,
         getNotesByDeck,
+        bulkMoveNotes,
+        bulkSetCompleted,
+        bulkDeleteNotes,
       }}
     >
       {children}
