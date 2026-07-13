@@ -23,7 +23,7 @@ function formatBackForExport(value: string): string {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    return `<br><font color="#ffff7f"><i>💡 ${safeContent}</i></font><br>`;
+    return `<font color="#ffff7f"><br><i>💡 ${safeContent}</i></font><br>`;
   });
 }
 /**
