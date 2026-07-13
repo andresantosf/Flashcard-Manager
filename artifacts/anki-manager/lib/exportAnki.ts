@@ -23,7 +23,7 @@ function formatBackForExport(value: string): string {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    return `<font color="#ffff7f"><br><i>💡 ${safeContent}</i></font><br>`;
+    return `<font color="#ffff7f"><br><i>💡 ${safeContent}</i></font>`;
   });
 }
 /**
@@ -54,7 +54,7 @@ export function buildAnkiTsv(
   ].join('\n');
 
   const rows = notes.map((note) => {
-    const deckName = deckMap[note.deckId] ?? 'Sem baralho';
+    const deckName = 'Medicina::Segundo Semestre::' + (deckMap[note.deckId] ?? 'Sem baralho');
     let back = formatBackForExport(note.back);
     const imageFile = imageFilenames?.[note.id];
     if (imageFile) {
