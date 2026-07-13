@@ -100,17 +100,30 @@ function FeedItem({
     outputRange: ['transparent', colors.primary],
   });
 
+  // Selection uses a full animated border (all four sides via borderColor),
+  // while the normal state uses only a left accent stripe in the deck
+  // color. These two must stay in separate style objects — mixing
+  // `borderColor` (all sides) with `borderLeftColor` (one side) in the same
+  // RN style object makes the generic `borderColor` win and erases the
+  // deck-color accent.
+  const borderStyle = selected
+    ? {
+        borderWidth: 2,
+        borderColor: selectedBorderColor,
+        borderLeftWidth: 2,
+      }
+    : {
+        borderLeftWidth: 4,
+        borderLeftColor: note.completed ? colors.border : deckColor,
+      };
+
   return (
     <>
       <Animated.View
         style={[
           styles.item,
-          {
-            backgroundColor: note.completed ? colors.muted : colors.card,
-            borderLeftColor: note.completed ? colors.border : deckColor,
-            borderWidth: selected ? 2 : 0,
-            borderColor: selected ? selectedBorderColor : 'transparent',
-          },
+          { backgroundColor: note.completed ? colors.muted : colors.card },
+          borderStyle,
         ]}
       >
       <Pressable
