@@ -5,13 +5,6 @@ import { Alert, Platform } from 'react-native';
 import type { Note, Deck } from '@/context/StorageContext';
 
 /**
- * Name of the Anki profile whose collection.media folder will receive the
- * exported images. Edit this if your Anki profile has a different name —
- * it's also editable directly in the generated .bat file.
- */
-const ANKI_PROFILE_NAME = 'André Santos';
-
-/**
  * Escapes a single TSV field per Anki import spec:
  * - If the value contains a tab, newline, or double-quote, wrap in double
  *   quotes and double any internal double-quotes.
@@ -121,55 +114,146 @@ async function fetchImageAsBase64(
 
 /**
  * Builds a Windows .bat script that:
- * 1. Copies the exported images into the local Anki profile's
- *    collection.media folder.
- * 2. Launches anki.exe pointing at cartoes_anki.txt, which makes Anki open
+ * 1. Detects every Anki profile under %APPDATA%\Anki2 that has a
+ *    collection.media folder, and lets the user pick one if there's more
+ *    than one (fixes the case where multiple profiles/collections exist
+ *    on the same machine).
+ * 2. Copies the exported images into that profile's collection.media
+ *    folder.
+ * 3. Launches anki.exe pointing at cartoes_anki.txt, which makes Anki open
  *    its import dialog for that file automatically.
+ *
+ * Progress is echoed step by step (1/4..4/4) with short pauses so the
+ * window doesn't look like it "flashes and closes", and every failure path
+ * ends in a paused error screen instead of silently closing.
  */
 function buildImportBat(): string {
   return [
     '@echo off',
-    'setlocal',
+    'setlocal EnableExtensions EnableDelayedExpansion',
+    'chcp 1252 >nul',
+    'title Importador de Cartoes - Anki',
     '',
-    'rem Se o nome do seu perfil no Anki for diferente, edite a linha abaixo:',
-    `set "PERFIL=${ANKI_PROFILE_NAME}"`,
+    'echo ============================================',
+    'echo   IMPORTADOR DE CARTOES PARA O ANKI',
+    'echo ============================================',
+    'echo.',
     '',
-    'set "MEDIA_DIR=%APPDATA%\\Anki2\\%PERFIL%\\collection.media"',
     'set "SCRIPT_DIR=%~dp0"',
+    'set "ANKI2_DIR=%APPDATA%\\Anki2"',
+    'set "MEDIA_DIR="',
+    'set "COUNT=0"',
     '',
-    'if not exist "%MEDIA_DIR%" (',
-    '  echo Pasta de midia do Anki nao encontrada:',
-    '  echo   "%MEDIA_DIR%"',
-    '  echo Edite a linha "set PERFIL=" neste arquivo com o nome exato do seu perfil no Anki.',
-    '  pause',
-    '  exit /b 1',
+    'echo [1/4] Procurando perfis do Anki...',
+    '',
+    'if not exist "%ANKI2_DIR%" (',
+    '  echo   [ERRO] Pasta do Anki nao encontrada: "%ANKI2_DIR%"',
+    '  set "ERRO=1"',
     ')',
     '',
-    'if exist "%SCRIPT_DIR%images\\*" (',
-    '  echo Copiando imagens para o Anki...',
-    '  xcopy /Y /I "%SCRIPT_DIR%images\\*" "%MEDIA_DIR%\\" >nul',
+    'if not defined ERRO (',
+    '  for /f "delims=" %%P in (\'dir /b /ad "%ANKI2_DIR%" 2^>nul\') do (',
+    '    if /I not "%%P"=="addons21" (',
+    '      if exist "%ANKI2_DIR%\\%%P\\collection.media" (',
+    '        set /a COUNT+=1',
+    '        set "PERFIL_!COUNT!=%%P"',
+    '        echo   [!COUNT!] %%P',
+    '      )',
+    '    )',
+    '  )',
     ')',
     '',
+    'if not defined ERRO if "!COUNT!"=="0" (',
+    '  echo   [ERRO] Nao encontrei nenhum perfil com collection.media.',
+    '  set "ERRO=1"',
+    ')',
+    '',
+    'if defined ERRO goto :falhou',
+    '',
+    'if "!COUNT!"=="1" (',
+    '  set "PERFIL_ESCOLHIDO=!PERFIL_1!"',
+    '  echo       Apenas um perfil encontrado, usando: "!PERFIL_ESCOLHIDO!"',
+    ') else (',
+    '  echo.',
+    '  set /p "ESCOLHA=Digite o numero do perfil que voce usa: "',
+    ')',
+    '',
+    'if not "!COUNT!"=="1" (',
+    '  call set "PERFIL_ESCOLHIDO=%%PERFIL_!ESCOLHA!%%"',
+    '  if not defined PERFIL_ESCOLHIDO (',
+    '    echo   [ERRO] Opcao invalida.',
+    '    set "ERRO=1"',
+    '  )',
+    ')',
+    '',
+    'if defined ERRO goto :falhou',
+    '',
+    'set "MEDIA_DIR=%ANKI2_DIR%\\!PERFIL_ESCOLHIDO!\\collection.media"',
+    'echo       OK - usando perfil: "!PERFIL_ESCOLHIDO!"',
+    'echo.',
+    '',
+    'echo [2/4] Copiando imagens para o Anki...',
+    'set "IMAGES_SRC=%SCRIPT_DIR%images"',
+    '',
+    'if not exist "!IMAGES_SRC!" (',
+    '  echo       Nenhuma pasta "images" encontrada - pulando esta etapa.',
+    '  goto :pulou_imagens',
+    ')',
+    '',
+    'robocopy "!IMAGES_SRC!" "!MEDIA_DIR!" /E >nul',
+    'if !ERRORLEVEL! GEQ 8 (',
+    '  echo       [ERRO] Falha ao copiar as imagens ^(codigo !ERRORLEVEL!^).',
+    '  set "ERRO=1"',
+    '  goto :pulou_imagens',
+    ')',
+    'echo       OK - imagens copiadas para "!PERFIL_ESCOLHIDO!".',
+    '',
+    ':pulou_imagens',
+    'if defined ERRO goto :falhou',
+    'timeout /t 1 /nobreak >nul',
+    'echo.',
+    '',
+    'echo [3/4] Procurando o executavel do Anki...',
     'set "ANKI_EXE="',
     'if exist "%LOCALAPPDATA%\\Programs\\Anki\\anki.exe" set "ANKI_EXE=%LOCALAPPDATA%\\Programs\\Anki\\anki.exe"',
     'if not defined ANKI_EXE if exist "%PROGRAMFILES%\\Anki\\anki.exe" set "ANKI_EXE=%PROGRAMFILES%\\Anki\\anki.exe"',
     'if not defined ANKI_EXE if exist "%PROGRAMFILES(X86)%\\Anki\\anki.exe" set "ANKI_EXE=%PROGRAMFILES(X86)%\\Anki\\anki.exe"',
     '',
     'if not defined ANKI_EXE (',
-    '  echo Nao encontrei o anki.exe automaticamente.',
-    '  echo Abra o Anki manualmente e importe o arquivo:',
-    '  echo   "%SCRIPT_DIR%cartoes_anki.txt"',
-    '  pause',
-    '  exit /b 1',
+    '  echo   [ERRO] Nao encontrei o anki.exe automaticamente.',
+    '  echo   Abra o Anki manualmente e importe o arquivo:',
+    '  echo     "%SCRIPT_DIR%cartoes_anki.txt"',
+    '  set "ERRO=1"',
     ')',
     '',
-    'echo Abrindo o Anki para importar os cartoes...',
-    'start "" "%ANKI_EXE%" "%SCRIPT_DIR%cartoes_anki.txt"',
+    'if defined ERRO goto :falhou',
     '',
+    'echo       OK - encontrado em "%ANKI_EXE%".',
+    'timeout /t 1 /nobreak >nul',
     'echo.',
-    'echo Pronto! Se a janela de importacao nao abrir automaticamente,',
-    'echo vá em Arquivo ^> Importar e selecione cartoes_anki.txt',
+    '',
+    'echo [4/4] Abrindo o Anki para importar os cartoes...',
+    'start "" "%ANKI_EXE%" "%SCRIPT_DIR%cartoes_anki.txt"',
+    'timeout /t 1 /nobreak >nul',
+    'echo.',
+    '',
+    'echo ============================================',
+    'echo   CONCLUIDO COM SUCESSO',
+    'echo ============================================',
+    'echo Se a janela de importacao nao abrir automaticamente,',
+    'echo va em Arquivo ^> Importar e selecione cartoes_anki.txt',
+    'echo.',
     'pause',
+    'exit /b 0',
+    '',
+    ':falhou',
+    'echo.',
+    'echo ============================================',
+    'echo   PROCESSO INTERROMPIDO - VEJA O ERRO ACIMA',
+    'echo ============================================',
+    'echo.',
+    'pause',
+    'exit /b 1',
   ].join('\r\n');
 }
 
